@@ -1,0 +1,160 @@
+
+  /* ======================================================
+     LAYOUT
+     ====================================================== */
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  .page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(270deg, #005073, #479DF6);
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  }
+
+  .results-container {
+    width: 70%;
+    max-width: 1600px;
+  }
+
+
+  /* ======================================================
+     RESULTS TABLE
+     ====================================================== */
+
+  .results-panel {
+    width: 100%;
+    border: 5px solid #ffffff;
+  }
+
+  .results-header {
+    background: #38a5e4;
+    color: #ffffff;
+    text-align: center;
+    font-weight: bold;
+    font-size: 2.6em;
+    letter-spacing: 1px;
+    padding: 24px 0;
+    border-bottom: 5px solid #ffffff;
+  }
+
+  .result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 40px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 2.2em;
+    letter-spacing: 1px;
+    border-bottom: 5px solid #ffffff;
+  }
+
+  .result-row:last-child {
+    border-bottom: none;
+  }
+
+  .result-values {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .result-row .seats,
+  .result-row .percent {
+    min-width: 1.4em;
+    text-align: center;
+    padding: 0.2em 0.6em;
+    border-radius: 6px;
+  }
+
+
+  /* ======================================================
+     PARTY COLOURS
+     ====================================================== */
+
+  .labor {
+    background: #f0000d;
+  }
+
+  .labor .seats,
+  .labor .percent {
+    background: #f5535d;
+  }
+
+
+  .liberal {
+    background: #0050b1;
+  }
+
+  .liberal .seats,
+  .liberal .percent {
+    background: #2f74c9;
+  }
+
+
+  .greens {
+    background: #408F38;
+  }
+
+  .greens .seats,
+  .greens .percent {
+    background: #4EAC61;
+  }
+
+
+  .one-nation {
+    background: #E67F00;
+  }
+
+  .one-nation .seats,
+  .one-nation .percent {
+    background: #E69849;
+  }
+
+
+  .other {
+    background: #929290;
+  }
+
+  .other .seats,
+  .other .percent {
+    background: #adadab;
+  }
+
+
+  /* ======================================================
+     STATS
+     ====================================================== */
+
+  .stats {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    color: #ffffff;
+    font-size: 2.4em;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  .stats .percent {
+    padding: 0.2em 0.6em;
+    border: 5px solid #ffffff;
+    background: #4d4d4d;
+    white-space: nowrap;
+  }
+  .stats .seats {
+    color: transparent;
+  }

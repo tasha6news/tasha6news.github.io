@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Clock/Logo</title>
+<style>
+
+  /* ======================================================
+     LAYOUT
+     ====================================================== */
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: transparent;   /* nothing renders outside the stage below */
+    overflow: hidden;
+  }
+
+  /* The page itself is a fixed 1920x1080 canvas. The stage is pinned to
+     the bottom-center of that canvas, with a small gap below it so it
+     floats slightly above the very bottom edge rather than touching it. */
+  .stage {
+    position: absolute;
+    padding: 0 0 0 0;
+    padding-top: 2.5%;
+    background: transparent;
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  }
+
+  .broadcast-row {
+    display: flex;
+    align-items: flex-start;   /* backdrop keeps its natural height instead of stretching */
+    width: 100%;
+  }
+
+  .logo-time-box {
+    width: 15%;
+    flex-shrink: 0;
+    background: #fd5f48;
+    display: flex;
+    flex-direction: column;
+    border-bottom-right-radius: 15px;
+    border-top-right-radius: 15px;
+  }
+
+  .logo-image {
+    flex: 1;                 /* takes up the remaining space between the strip and clock */
+    background-color: #222222;
+    width: 100%;
+
+  }
+
+  .clock {
+    background: #38a5e4;
+    color: #ffffff;
+    text-align: center;
+    font-weight: bold;
+    font-size: 20px;
+    padding: 8px 0;
+    border-bottom-right-radius: 15px;
+  }
+
+  .live-strip {
+    background: #fd5f48;
+    color: #ffffff;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    letter-spacing: 3px;
+    padding: 4px 0;
+    border-top-right-radius: 15px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+    <div class="broadcast-row">
+      <div class="logo-time-box">
+        <div class="live-strip">LIVE</div>
+        <img class="logo-image" src="Logo2.png" alt="Logo">
+        <div class="clock" id="clock">--:--:-- AEDT</div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  function updateClock() {
+    const now = new Date();
+
+    const timeString = now.toLocaleTimeString("en-AU", {
+      hour12: true,
+      timeZone: "Australia/Melbourne",
+    });
+
+    document.getElementById("clock").textContent = timeString + " AEDT";
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>

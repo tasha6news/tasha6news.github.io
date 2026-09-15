@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Results Statewide</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+<div class="page">
+
+  <div class="results-container">
+<!-- ==================================================
+     RESULTS TABLE
+     ================================================== -->
+
+<div class="results-panel">
+
+  <div class="results-header">
+    LEGISLATIVE COUNCIL RESULTS
+  </div>
+
+
+  <div class="result-row labor">
+    <span>LABOR</span>
+
+    <div class="result-values">
+      <span class="seats" id="seats-labor">--</span>
+      <span class="percent" id="percent-labor">--%</span>
+    </div>
+  </div>
+
+
+  <div class="result-row liberal">
+    <span>LIBERAL/NATIONAL</span>
+
+    <div class="result-values">
+      <span class="seats" id="seats-liberal">--</span>
+      <span class="percent" id="percent-liberal">--%</span>
+    </div>
+  </div>
+
+
+  <div class="result-row greens">
+    <span>GREENS</span>
+
+    <div class="result-values">
+      <span class="seats" id="seats-greens">--</span>
+      <span class="percent" id="percent-greens">--%</span>
+    </div>
+  </div>
+
+
+  <div class="result-row one-nation">
+    <span>ONE NATION</span>
+
+    <div class="result-values">
+      <span class="seats" id="seats-one-nation">--</span>
+      <span class="percent" id="percent-one-nation">--%</span>
+    </div>
+  </div>
+
+
+  <div class="result-row other">
+    <span>OTHER</span>
+
+    <div class="result-values">
+      <span class="seats" id="seats-other">--</span>
+      <span class="percent" id="percent-other">--%</span>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ==================================================
+     STATS
+     ================================================== -->
+
+<div class="stats">
+
+  <span class="seats" id="seats-counted">
+    -- to win
+  </span>
+
+  <span class="percent" id="percent-counted">
+    --% COUNTED
+  </span>
+
+</div>
+
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+
+<script>
+
+  /* ======================================================
+     PAGE CONFIG — Legislative Council
+     ====================================================== */
+
+  initResultsPage({
+
+    refreshIntervalMs: 60 * 1000,
+
+    valuesKey: "Con-VALUES",
+
+    partyToElements: {
+
+      "Con-Labor": {
+        seats: "seats-labor",
+        percent: "percent-labor"
+      },
+
+      "Con-Libnat": {
+        seats: "seats-liberal",
+        percent: "percent-liberal"
+      },
+
+      "Con-Green": {
+        seats: "seats-greens",
+        percent: "percent-greens"
+      },
+
+      "Con-One Nation": {
+        seats: "seats-one-nation",
+        percent: "percent-one-nation"
+      },
+
+      "Con-Other": {
+        seats: "seats-other",
+        percent: "percent-other"
+      },
+
+      "Con-VALUES": {
+        seats: "seats-counted",
+        percent: "percent-counted"
+      }
+
+    },
+
+    missingDataFallback: function (partyName, seatsElement, percentElement) {
+
+      if (partyName === "Con-VALUES") {
+
+        if (seatsElement) seatsElement.textContent = "-- to win";
+        if (percentElement) percentElement.textContent = "--% counted";
+
+      } else {
+
+        if (seatsElement) seatsElement.textContent = "--";
+        if (percentElement) percentElement.textContent = "--%";
+
+      }
+
+    }
+
+  });
+
+</script>
+
+</body>
+</html>

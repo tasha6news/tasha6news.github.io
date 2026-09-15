@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Election Pendulum</title>
+<style>
+  /* ======================================================
+     PENDULUM STYLES
+     ====================================================== */
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+  }
+
+  .page {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(270deg, #005073, #479DF6);
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+
+  /* The stream canvas is 1920 x 1080. The pendulum itself is
+     centred and occupies roughly 70% of the stream width,
+     capped at 1600px. */
+  .pendulum-container {
+    width: 90%;
+    background: transparent;
+    overflow: hidden;
+  }
+
+
+  /* ======================================================
+     HEADERS
+     ====================================================== */
+
+  .pendulum-header {
+    text-align: center;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 2.4em;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+
+  .column-headers {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 10px;
+  }
+
+  .col-header {
+    text-align: center;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.4em;
+    letter-spacing: 1px;
+    padding: 10px 0;
+    border-radius: 6px;
+  }
+
+  .col-header.labor {
+    background: #f0000d;
+  }
+
+  .col-header.crossbench {
+    background: #4d4d4d;
+  }
+
+  .col-header.libnat {
+    background: #0050b1;
+  }
+
+
+  /* ======================================================
+     COLUMNS
+     ====================================================== */
+
+  .pendulum-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    align-items: start;
+  }
+
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Labor and Lib/Nat are split into three sub-columns so the
+     longer seat lists remain compact and balanced in the stream. */
+  .column.split-seats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 8px;
+    align-items: start;
+  }
+
+
+  /* ======================================================
+     SEAT ROWS
+     Each row can be:
+       .pending  - CallOnNight is blank, shown filled in
+                   the party's lighter shade
+       .called   - CallOnNight has a value, shown filled in
+                   the party's darker shade
+     ====================================================== */
+
+  .seat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+  }
+
+  .seat-row .seat-margin {
+    font-size: 0.8em;
+    opacity: 0.9;
+  }
+
+
+  /* ======================================================
+     PARTY COLOURS
+     Each party has a light shade (not yet called) and a
+     dark shade (called), kept in sync with
+     styles.css / lowerThird.css.
+     ====================================================== */
+
+  .seat-row.labor.pending {
+    background: #929290;
+  }
+
+  .seat-row.labor.called {
+    background: #f0000d;
+  }
+
+
+  .seat-row.libnat.pending {
+    background: #929290;
+  }
+
+  .seat-row.libnat.called {
+    background: #0050b1;
+  }
+
+
+  .seat-row.green.pending {
+    background: #929290;
+  }
+
+  .seat-row.green.called {
+    background: #408F38;
+  }
+
+
+  .seat-row.one-nation.pending {
+    background: #929290;
+  }
+
+  .seat-row.one-nation.called {
+    background: #E67F00;
+  }
+
+
+  .seat-row.other.pending {
+    background: #929290;
+  }
+
+  .seat-row.other.called {
+    background: #929290;
+  }
+
+  /* Called seats use the party that actually won the seat,
+     rather than the incumbent party's darker shade. */
+  .seat-row.called.result-labor {
+    background: #f0000d;
+  }
+
+  .seat-row.called.result-libnat {
+    background: #0050b1;
+  }
+
+  .seat-row.called.result-green {
+    background: #408F38;
+  }
+
+  .seat-row.called.result-one-nation {
+    background: #E67F00;
+  }
+
+  .seat-row.called.result-other {
+    background: #929290;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="pendulum-container">
+
+    <div class="pendulum-header">ELECTORAL PENDULUM</div>
+
+    <div class="column-headers">
+      <div class="col-header labor">LABOR</div>
+      <div class="col-header crossbench">CROSSBENCH</div>
+      <div class="col-header libnat">LIB/NAT</div>
+    </div>
+
+    <div class="pendulum-columns">
+      <div class="column split-seats" id="labor-column"></div>
+      <div class="column" id="crossbench-column"></div>
+      <div class="column split-seats" id="libnat-column"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+
+<script>
+
+  /* ======================================================
+     PAGE CONFIG — Pendulum
+     Reads from the "StreamSeats" tab of the same sheet
+     (Seat, Margin, Party, CallOnNight columns).
+     ====================================================== */
+
+  const PENDULUM_SHEET_NAME = "StreamSeats";
+
+  const PENDULUM_REFRESH_INTERVAL_MS = 30 * 1000;
+
+
+  /* ======================================================
+     PARTY CLASSIFICATION
+     Matches loosely on keywords rather than an exact string,
+     since the sheet may use "Liberal" / "National" / "Greens"
+     etc rather than the exact labels used elsewhere on the
+     site. Anything unmatched (independents, etc.) falls into
+     the crossbench with a neutral grey row.
+     ====================================================== */
+
+  function classifyParty(partyRaw) {
+
+    const p = (partyRaw || "").toLowerCase();
+
+    if (p.includes("labor")) {
+      return { group: "labor", rowClass: "labor" };
+    }
+
+    if (p.includes("libnat") || p.includes("liberal") || p.includes("national") || p.includes("lnp") || p.includes("coalition")) {
+      return { group: "libnat", rowClass: "libnat" };
+    }
+
+    if (p.includes("green")) {
+      return { group: "crossbench", rowClass: "green" };
+    }
+
+    if (p.includes("one nation")) {
+      return { group: "crossbench", rowClass: "one-nation" };
+    }
+
+    return { group: "crossbench", rowClass: "other" };
+
+  }
+
+
+  /* ======================================================
+     EXTRACT SEATS
+     Column A = seat name, B = margin, C = party, D = call.
+     ====================================================== */
+
+  function extractSeats(sheetJson) {
+
+    const seats = [];
+
+    sheetJson.table.rows.forEach(row => {
+
+      const seat =
+        row.c[0] ? row.c[0].v : null;
+
+      const marginRaw =
+        row.c[1] ? row.c[1].v : null;
+
+      const party =
+        row.c[2] ? row.c[2].v : null;
+
+      const callOnNight =
+        row.c[3] ? row.c[3].v : null;
+
+
+      if (!seat || !party) {
+        return;
+      }
+
+
+      const marginNum = parseFloat(marginRaw);
+
+      seats.push({
+        seat: seat,
+        margin: isNaN(marginNum) ? null : marginNum,
+        marginLabel:
+          (marginRaw === null || marginRaw === undefined || marginRaw === "")
+            ? "TBC"
+            : marginRaw + "%",
+        party: party,
+        callOnNight: callOnNight,
+        called: !!(callOnNight && String(callOnNight).trim() !== "")
+      });
+
+    });
+
+    return seats;
+
+  }
+
+
+  /* ======================================================
+     SORT — most marginal first, undecided margins last
+     ====================================================== */
+
+  function sortByMargin(seats) {
+
+    return seats.slice().sort((a, b) => {
+
+      if (a.margin === null && b.margin === null) return 0;
+      if (a.margin === null) return 1;
+      if (b.margin === null) return -1;
+
+      return a.margin - b.margin;
+
+    });
+
+  }
+
+
+  /* ======================================================
+     BUILD A SEAT ROW
+     "mirrored" puts the margin on the left / name on the
+     right, so the LibNat column reads as a mirror image of
+     the Labor column either side of the crossbench.
+     ====================================================== */
+
+  function buildRow(seatData, rowClass, mirrored) {
+
+    const row = document.createElement("div");
+
+    /*
+     * Pending seats use the incumbent party's light colour.
+     * Called seats use the party named in CallOnNight, so a
+     * seat changing hands immediately takes the winner's colour.
+     */
+    if (seatData.called) {
+      const result = classifyParty(seatData.callOnNight);
+      row.className =
+        "seat-row " + rowClass + " called result-" + result.rowClass;
+    } else {
+      row.className =
+        "seat-row " + rowClass + " pending";
+    }
+
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "seat-name";
+    nameSpan.textContent = seatData.seat;
+
+    const marginSpan = document.createElement("span");
+    marginSpan.className = "seat-margin";
+    marginSpan.textContent = seatData.marginLabel;
+
+
+    if (mirrored) {
+      row.appendChild(marginSpan);
+      row.appendChild(nameSpan);
+    } else {
+      row.appendChild(nameSpan);
+      row.appendChild(marginSpan);
+    }
+
+    return row;
+
+  }
+
+
+  /* ======================================================
+     RENDER
+     ====================================================== */
+
+  function renderPendulum(seats) {
+
+    const laborColumn = document.getElementById("labor-column");
+    const crossbenchColumn = document.getElementById("crossbench-column");
+    const libnatColumn = document.getElementById("libnat-column");
+
+    laborColumn.innerHTML = "";
+    crossbenchColumn.innerHTML = "";
+    libnatColumn.innerHTML = "";
+
+
+    const laborSeats = sortByMargin(
+      seats.filter(s => classifyParty(s.party).group === "labor")
+    );
+
+    const libnatSeats = sortByMargin(
+      seats.filter(s => classifyParty(s.party).group === "libnat")
+    );
+
+    const crossbenchSeats = sortByMargin(
+      seats.filter(s => classifyParty(s.party).group === "crossbench")
+    );
+
+
+    laborSeats.forEach(s => {
+      laborColumn.appendChild(buildRow(s, "labor", false));
+    });
+
+    libnatSeats.forEach(s => {
+      libnatColumn.appendChild(buildRow(s, "libnat", true));
+    });
+
+    crossbenchSeats.forEach(s => {
+      const rowClass = classifyParty(s.party).rowClass;
+      crossbenchColumn.appendChild(buildRow(s, rowClass, false));
+    });
+
+  }
+
+
+  /* ======================================================
+     REFRESH DATA
+     (uses buildSheetUrl / parseGoogleResponse from combined.js)
+     ====================================================== */
+
+  async function refreshPendulum() {
+
+    try {
+
+      const response =
+        await fetch(buildSheetUrl(PENDULUM_SHEET_NAME));
+
+      const rawText =
+        await response.text();
+
+      const sheetJson =
+        parseGoogleResponse(rawText);
+
+      const seats =
+        extractSeats(sheetJson);
+
+      renderPendulum(seats);
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Failed to refresh pendulum data:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /* ======================================================
+     INITIAL LOAD + AUTO REFRESH
+     ====================================================== */
+
+  refreshPendulum();
+
+  setInterval(
+    refreshPendulum,
+    PENDULUM_REFRESH_INTERVAL_MS
+  );
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Election Lower Third</title>
+<style>
+
+  /* ======================================================
+     LAYOUT
+     ====================================================== */
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: transparent;   /* nothing renders outside the stage below */
+    overflow: hidden;
+  }
+
+  /* The page itself is a fixed 1920x1080 canvas. The stage is pinned to
+     the bottom-center of that canvas, with a small gap below it so it
+     floats slightly above the very bottom edge rather than touching it. */
+  .stage {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    transform: translateX(-50%);
+    width: 1700px;
+    padding: 0 0 0 0;
+    background: linear-gradient(270deg, #005073, #479DF6);
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+        border-radius: 15px;
+  }
+
+  /* Overall row: [ 2.5% gap ][ grey backdrop ][ black logo/time box ]
+     The backdrop takes 82.5% of the width, leaving exactly 2.5% on
+     the left and 15% on the right for the logo/time box. */
+  .broadcast-row {
+    align-items: flex-start;   /* backdrop keeps its natural height instead of stretching */
+    width: 100%;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    padding-left:20px;
+  }
+
+  .header-text {
+    color: #ffffff;
+    font-size: 35px;
+    font-weight: bold;
+  }
+
+  .header-box {
+    background: #4d4d4d;      /* opaque grey, unlike the transparent backdrop */
+    color: #ffffff;
+    font-size: 25px;
+    font-weight: bold;
+    padding: 6px 16px;
+    border-radius: 4px;
+  }
+
+  .results {
+    display: flex;
+    gap: 6px;
+    padding:10px;
+    padding-top: 0;
+  }
+
+  .party-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;            /* share the available width evenly between blocks */
+    height: 64px;
+    padding: 0 18px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 30px;
+    letter-spacing: 1px;
+  }
+
+  /* The number sits in its own lighter-shade badge, inset from the
+     edges of the party block. */
+  .seats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+
+  /* ======================================================
+     PARTY COLORS
+     Edit these to change the block colors.
+     Each party has a main color (the block background) and a
+     lighter color (the number badge background).
+     ====================================================== */
+
+  .alp { background: #f0000d; }             /* Labor */
+  .alp .seats { background: #f5535d; }
+
+  .lnp { background: #0050b1; }             /* Liberal/National coalition */
+  .lnp .seats { background: #2f74c9; }
+
+  .grn { background: #408F38; }             /* Greens */
+  .grn .seats { background: #4EAC61; }
+
+  .onp { background: #E67F00; }             /* One Nation */
+  .onp .seats { background: #E69849; }
+
+  .oth { background: #929290; }             /* Other */
+  .oth .seats { background: #adadab; }
+
+</style>
+</head>
+<body>
+
+  <div class="stage">
+    <div class="broadcast-row">
+
+        <div class="header-row">
+          <span class="header-text">VICTORIA DECIDES</span>
+          <div class="header-box">TO WIN: 45</div>
+        </div>
+
+        <div class="results">
+          <div class="party-block alp">
+            <span>LABOR</span><span class="seats" id="seats-alp">--</span>
+          </div>
+          <div class="party-block lnp">
+            <span>LIB/NAT</span><span class="seats" id="seats-lnp">--</span>
+          </div>
+          <div class="party-block grn">
+            <span>GREENS</span><span class="seats" id="seats-grn">--</span>
+          </div>
+          <div class="party-block onp">
+            <span>ONE NATION</span><span class="seats" id="seats-onp">--</span>
+          </div>
+          <div class="party-block oth">
+            <span>OTHER</span><span class="seats" id="seats-oth">--</span>
+          </div>
+
+      </div>
+
+      
+
+    </div>
+  </div>
+
+<script src="script.js"></script>
+
+<script>
+
+  /* ======================================================
+     PAGE CONFIG — Lower Third
+     Only seat counts are shown here, so each party's mapping
+     omits "percent" and no valuesKey is set.
+     ====================================================== */
+
+  initResultsPage({
+
+    refreshIntervalMs: 15 * 1000, // 15 seconds
+
+    partyToElements: {
+      "Labor":      { seats: "seats-alp" },
+      "Libnat":     { seats: "seats-lnp" },
+      "Green":      { seats: "seats-grn" },
+      "One Nation": { seats: "seats-onp" },
+      "Other":      { seats: "seats-oth" }
+    },
+
+    // Matches the original behaviour: always reset to "--" for a
+    // party with no row yet, since this page shows seats only.
+    missingDataFallback: function (partyName, seatsElement, percentElement) {
+      if (seatsElement) seatsElement.textContent = "--";
+    }
+
+  });
+
+</script>
+
+</body>
+</html>
