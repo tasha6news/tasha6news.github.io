@@ -35,7 +35,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 <script>
 const P=[['Labor','LABOR','LABOR'],['LibNat','LIBERAL/NATIONAL','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:4,independent:4};
-const DEMO=['Statistics,%','CountedLA,42.31','CountedLC,','','Assembly,Seats Called,Primary','Labor,31,36.52','LibNat,22,33.10','Greens,4,12.04','OneNation,3,9.87','Other,2,8.47',...Array(9).fill(''),'Seat,Incumbent,Call,Labor,LibNat,Green,One Nation,Other','Bendigo East,Labor,Labor,41.20,30.15,8.40,12.60,7.65'].join('\n');
+const DEMO=['Statistics,%','CountedLA,42.31','CountedLC,','','Assembly,Seats Called,Primary','Labor,31,36.52','LibNat,22,33.10','Greens,4,12.04','OneNation,3,9.87','Other,2,8.47',...Array(9).fill(''),'Seat,Incumbent,Call,Labor,LibNat,Green,One Nation,Other,Counted','Bendigo East,Labor,Labor,41.20,30.15,8.40,12.60,7.65,58.40'].join('\n');
 const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
 function parseCSV(t){const r=[];let row=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){row.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;row.push(c);r.push(row);row=[];c=''}else c+=ch}row.push(c);r.push(row);return r}
@@ -52,28 +52,30 @@ function rows(vals,counted,title,id){
  `<div class="abs" style="left:108px;top:44px">${P.map((p,i)=>`<div class="row" style="top:${220+134*i}px"><b style="color:var(--c${i})">${p[1]}</b><i style="background:var(--c${i})">${vals[i]}</i></div>`).join('')}</div>${circles()}</div>`}
 function render(g){
  detect(g);const counted=pc(cell(g,2,1));
- const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=[3,4,5,6,7].map(c=>pc(cell(g,21,c)));
+ const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=[3,4,5,6,7].map(c=>pc(cell(g,21,c))),seatCounted=pc(cell(g,21,8));
  if(view=='clock'){$(`<div class="stage">${clockHTML()}</div>`)}
  else if(view=='state'){$(rows([6,7,8,9,10].map(r=>pc(cell(g,r,2))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
- else if(view=='seat'){$(rows(sv,counted,seat.toUpperCase(),'f'));fit('.f',105)}
+ else if(view=='seat'){$(rows(sv,seatCounted,seat.toUpperCase(),'f'));fit('.f',105)}
  else if(view=='called'){
-  const k=KEYS[call.toLowerCase().replace(/[^a-z]/g,'')],w=call?(k===undefined?4:k):-1,ik=KEYS[inc.toLowerCase().replace(/[^a-z]/g,'')];
-  const sub=w<0?'':(w===ik?'RETAIN':'GAIN'+(ik>=0?' FROM '+P[ik][1]:''));
+  const k=KEYS[call.toLowerCase().replace(/[^a-z]/g,'')],w=call?(k===undefined?4:k):-1;
   $(`<div class="stage bg"><div class="card">
    <img class="abs" src="assets/projects_logo.png" style="left:472px;top:23px;width:717px">
    <div class="fitbox" style="top:150px;height:230px;font:800 200px/230px Barlow,sans-serif"><span class="f">${seat.toUpperCase()}</span></div>
    <div class="fitbox" style="left:152px;width:1400px;top:360px;height:420px;font:700 440px/420px Barlow,sans-serif;color:var(${w<0?'--c4':'--c'+w})"><span class="g">${w<0?'NO CALL YET':P[w][2]}</span></div>
-   <div class="fitbox" style="top:790px;height:70px;font:600 56px/70px Barlow,sans-serif;color:#222"><span class="h">${sub}</span></div></div>${circles()}${clockHTML()}</div>`);
-  fit('.f',200);fit('.g',440);fit('.h',56)}
+</div>${circles()}${clockHTML()}</div>`);
+  fit('.f',200);fit('.g',440)}
  else if(view=='lower'){
   $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${parseInt(cell(g,6+i,1))||0}</u></div>`).join('')}</div></div></div>`)}
- else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_CSV_URL?'Live sheet connected.':'No sheet URL set in config.js - showing demo data.'}</p></div>`);
+ else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_ID?'Live sheet connected.':'No SHEET_ID set in config.js - showing demo data.'}</p></div>`);
  tick()}
-(async()=>{
- const c=localStorage.getItem('6n');if(c)render(parseCSV(c));
- try{const u=CONFIG.SHEET_CSV_URL;let t=DEMO;if(u){const r=await fetch(u+(u.includes('?')?'&':'?')+'_='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;t=await r.text();localStorage.setItem('6n',t)}render(parseCSV(t))}
- catch(e){if(!c)render(parseCSV(DEMO))}
- setInterval(tick,1000);
- if(view)setTimeout(()=>location.reload(),10000);
-})();
+let last=null,cached=localStorage.getItem('6n');
+function draw(t){if(t===last)return;last=t;render(parseCSV(t))}
+function url(){const C=CONFIG;if(!C.SHEET_ID)return null;
+ return `https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&range=A1:I25&sheet=${encodeURIComponent(C.SHEET_NAME||'LiveStreamData')}&_=${Date.now()}`}
+async function poll(){
+ try{const u=url();if(!u)draw(DEMO);else{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;const t=await r.text();if(/^\s*</.test(t))throw 0;localStorage.setItem('6n',t);draw(t)}}
+ catch(e){if(last===null)draw(cached||DEMO)} /* on error keep last good data on screen */
+ setTimeout(poll,CONFIG.POLL_MS||2000)}
+if(cached&&url())draw(cached);
+poll();setInterval(tick,1000);
 </script></body></html>

@@ -1,5 +1,8 @@
-// Paste your Google Sheet "Publish to web" CSV link here (see README.md).
-// Leave empty to run with built-in demo data.
+// 1) Share the sheet: Share > General access > "Anyone with the link" > Viewer.
+// 2) Paste the ID from the sheet URL: docs.google.com/spreadsheets/d/<SHEET_ID>/edit
+// Leave SHEET_ID empty to run with built-in demo data.
 window.CONFIG = {
-  SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQP7Vft88JuDQ8YwyN2xnzX25Yji1Max8_YEdw84QINZ82_q_kFk5kzaLo0z7RRWTGYGali1VZRausA/pub?gid=0&single=true&output=csv"
+  SHEET_ID: "1vtPT1S1QIRMb3AujfUEDTknGQ4SAAas07YSz6_qdqDo",
+  SHEET_NAME: "LiveStreamData",
+  POLL_MS: 2000   // how often to check for new data (no page reload)
 };

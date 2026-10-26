@@ -2,12 +2,13 @@
 
 Pages (1920x1080): `index.html?view=clock | seat | called | state | lower`
 
-## Connect the Google Sheet
-1. Open the sheet > File > Share > Publish to web.
-2. Choose the **LiveStreamData** tab and format **Comma-separated values (.csv)** > Publish.
-3. Copy the link (ends `output=csv`) into `config.js` as `SHEET_CSV_URL`.
-4. Keep the layout (rows 2, 6-10, 21) unchanged. Published sheets refresh roughly every 5 minutes; Google controls that.
+## Live data (no publishing delay, no page reloads)
+The graphics poll the sheet directly every 2 seconds (`POLL_MS`) through Google's live query endpoint and only redraw when values change.
+1. Open the sheet > Share > General access > **Anyone with the link: Viewer**.
+2. Copy the ID from the URL (`/spreadsheets/d/<SHEET_ID>/edit`) into `config.js`.
+3. Tab name must be `LiveStreamData` (or change `SHEET_NAME`). Layout: rows 2, 6-10, and 21 (columns A-I; I = seat counted %).
+If a fetch fails, the last good data stays on screen.
 
 ## GitHub Pages
 Upload the folder contents to a repo > Settings > Pages > deploy from `main` / root.
-Use `https://USER.github.io/REPO/?view=lower` etc. as OBS/vMix Browser Sources (1920x1080).
+Use `https://USER.github.io/REPO/?view=lower` etc. as 1920x1080 browser sources.
