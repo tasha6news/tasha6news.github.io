@@ -38,10 +38,14 @@ const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green
 const DEMO='';
 const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
-function parseSheet(raw){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('bad response');
- const j=JSON.parse(m[1]),T=j.table,v=c=>c?(c.f!=null?String(c.f):(c.v!=null?String(c.v):'')):'';
+/* Each block is requested separately so every column is one data type (Google's gviz nulls out
+   cells whose type differs from the rest of the column) and rows never shift. [range, first sheet row, row count] */
+const BLOCKS=[['A2:B3',2,2],['A6:C10',6,5],['A21:I21',21,1]];
+function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('bad response');
+ const T=JSON.parse(m[1]).table,v=c=>c?(c.f!=null?String(c.f):(c.v!=null?String(c.v):'')):'';
  const g=T.rows.map(r=>T.cols.map((_,i)=>v((r.c||[])[i])));
- const h=T.cols.map(c=>c.label||'');if(h.some(x=>x))g.unshift(h); /* header row not consumed as data */
+ const h=T.cols.map(c=>c.label||'');
+ if(g.length<n&&h.some(x=>x))g.unshift(h); /* a row Google treated as a header goes back in as data */
  return g}
 function parseCSV(t){const r=[];let row=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','){row.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;row.push(c);r.push(row);row=[];c=''}else c+=ch}row.push(c);r.push(row);return r}
 const cell=(g,r,c)=>((g[r-1]||[])[c]||'').trim();
@@ -75,11 +79,15 @@ function render(g){
  tick()}
 let last=null,cached=localStorage.getItem('6n');
 function draw(t){if(t===last)return;last=t;render(t?JSON.parse(t):[[]])}
-function url(){const C=CONFIG;if(!C.SHEET_ID)return null;
- return `https://docs.google.com/spreadsheets/d/${C.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=A1:I25&sheet=${encodeURIComponent(C.SHEET_NAME||'LiveStreamData')}&_=${Date.now()}`}
+const gurl=rg=>`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(CONFIG.SHEET_NAME||'LiveStreamData')}&_=${Date.now()}`;
+const url=()=>CONFIG.SHEET_ID;
 async function poll(){
- try{const u=url();if(!u)draw(DEMO);else{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;const t=JSON.stringify(parseSheet(await r.text()));localStorage.setItem('6n',t);draw(t)}}
- catch(e){if(last===null)draw(cached||'')} /* on error keep last good data on screen */
+ try{if(!url())draw(DEMO);else{
+  const res=await Promise.all(BLOCKS.map(async([rg,s0,n])=>{const r=await fetch(gurl(rg),{cache:'no-store'});if(!r.ok)throw 0;return [s0,parseSheet(await r.text(),n)]}));
+  const g=[];res.forEach(([s0,rows])=>rows.forEach((r,i)=>g[s0-1+i]=r));for(let i=0;i<g.length;i++)g[i]=g[i]||[];
+  const t=JSON.stringify(g);localStorage.setItem('6n',t);draw(t);
+  if(new URLSearchParams(location.search).get('debug')){let d=document.getElementById('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px';document.body.appendChild(d)}d.textContent=[2,3,6,7,8,9,10,21].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n')}}}
+ catch(e){console.error('Sheet fetch failed',e);if(last===null)draw(cached||'')} /* on error keep last good data on screen */
  setTimeout(poll,CONFIG.POLL_MS||2000)}
 if(cached&&url())draw(cached);
 poll();setInterval(tick,1000);
