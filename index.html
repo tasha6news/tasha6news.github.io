@@ -18,9 +18,9 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .row b{position:absolute;left:12px;line-height:114px;font:700 70px/114px 'Trebuchet MS',sans-serif}
 .row i{position:absolute;left:1136px;top:13px;width:413px;height:88px;border-radius:12px;color:#fff;text-align:center;font:700 70px/88px 'Trebuchet MS',sans-serif}
 /* clock */
-.clock{position:absolute;left:0;top:38px;width:209px;height:163px;border-radius:0 20px 20px 0;overflow:hidden;font-weight:700;color:#fff;text-align:center}
+.clock{position:absolute;left:0;top:37px;width:209px;height:163px;border-radius:0 20px 20px 0;overflow:hidden;font-weight:700;color:#fff;text-align:center}
 .clock .live{height:38px;line-height:38px;background:#ff6048;font-size:26px}
-.clock img{display:block;width:209px;height:87px}
+.clock img{display:block;width:209px;height:88px;object-fit:cover}
 .clock .time{height:38px;line-height:38px;background:#3ba5e6;font-size:27px}
 /* lower third */
 .lt{position:absolute;left:108px;top:925px;width:1704px;height:110px;border-radius:20px;background:linear-gradient(90deg,#18bff4,#2578bd)}
@@ -51,6 +51,9 @@ function parseCSV(t){const r=[];let row=[],c='',q=false;for(let i=0;i<t.length;i
 const cell=(g,r,c)=>((g[r-1]||[])[c]||'').trim();
 let FRAC=false;
 function pc(v,d){if(v==='')return '-';const n=parseFloat(v.replace(/[%,]/g,''));if(isNaN(n))return '-';return (FRAC&&!v.includes('%')?n*100:n).toFixed(2)+'%'}
+const SKEY=['labor','libnat','greens','onenation','other'];
+const nk=x=>(x||'').toLowerCase().replace(/[^a-z]/g,'');
+function srow(g,i){for(let r=6;r<=10;r++){const k=nk(cell(g,r,0));if(k===SKEY[i]||(i===2&&k==='green')||(i===4&&k==='others'))return r}return 6+i}
 function detect(g){const v=[6,7,8,9,10].map(r=>cell(g,r,2)).filter(x=>x&&!x.includes('%')).map(parseFloat);FRAC=v.length>0&&v.reduce((a,b)=>a+b,0)<=1.01}
 const clockHTML=()=>`<div class="clock"><div class="live">LIVE</div><img src="assets/dark_logo.jpg"><div class="time" id="t">--:-- AEDT</div></div>`;
 function tick(){const e=document.getElementById('t');if(e)e.textContent=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Melbourne',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).replace(/^24/,'00')+' AEDT'}
@@ -63,7 +66,7 @@ function render(g){
  detect(g);const counted=pc(cell(g,2,1));
  const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=[3,4,5,6,7].map(c=>pc(cell(g,21,c))),seatCounted=pc(cell(g,21,8));
  if(view=='clock'){$(`<div class="stage">${clockHTML()}</div>`)}
- else if(view=='state'){$(rows([6,7,8,9,10].map(r=>pc(cell(g,r,2))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
+ else if(view=='state'){$(rows([0,1,2,3,4].map(i=>pc(cell(g,srow(g,i),2))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
  else if(view=='seat'){$(rows(sv,seatCounted,seat.toUpperCase()||'-','f'));fit('.f',105)}
  else if(view=='called'){
   const k=KEYS[call.toLowerCase().replace(/[^a-z]/g,'')],w=call?(k===undefined?4:k):-1;
@@ -71,10 +74,10 @@ function render(g){
    <img class="abs" src="assets/projects_logo.png" style="left:472px;top:23px;width:717px">
    <div class="fitbox" style="top:150px;height:230px;font:800 200px/230px Barlow,sans-serif"><span class="f">${seat.toUpperCase()||'-'}</span></div>
    <div class="fitbox" style="left:152px;width:1400px;top:360px;height:420px;font:700 440px/420px Barlow,sans-serif;color:var(${w<0?'--c4':'--c'+w})"><span class="g">${w<0?'-':P[w][2]}</span></div>
-</div>${circles()}${clockHTML()}</div>`);
+</div>${circles()}</div>`);
   fit('.f',200);fit('.g',440)}
  else if(view=='lower'){
-  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,6+i,1)===''||isNaN(parseInt(cell(g,6+i,1))))?'-':parseInt(cell(g,6+i,1))}</u></div>`).join('')}</div></div></div>`)}
+  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),1)===''||isNaN(parseInt(cell(g,srow(g,i),1))))?'-':parseInt(cell(g,srow(g,i),1))}</u></div>`).join('')}</div></div></div>`)}
  else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_ID?'Live sheet connected.':'No SHEET_ID set in config.js - graphics show -.'}</p></div>`);
  tick()}
 let last=null,cached=localStorage.getItem('6n');
