@@ -33,7 +33,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 8 - Other always last';
+const BUILD='build 9 - clock on every graphic';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['LibNat','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -69,7 +69,7 @@ function rows(vals,counted,title,id,ind){
  rest.splice(at,0,oth);L.splice(0,L.length,...rest);
  const six=L.length>5,h=six?98:114,pt=six?114:134,ph=six?76:88,fs=six?60:70;
  return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${counted==='-'?'-':counted+' COUNTED'}</div></div>`+
- `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px">${x[2]}</i></div>`).join('')}</div>${circles()}</div>`}
+ `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px">${x[2]}</i></div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
 function render(g){
  detect(g);const counted=pc(cell(g,2,1));
  const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=(FRAC=[3,4,5,6,7,8].map(c=>cell(g,21,c)).filter(x=>x&&!x.includes('%')).map(parseFloat).reduce((a,b)=>a+b,0)<=1.01,[3,4,5,6,8].map(c=>pc(cell(g,21,c)))),indV=pc(cell(g,21,7)),seatCounted=pc(cell(g,21,9));
@@ -82,10 +82,10 @@ function render(g){
    <img class="abs" src="assets/projects_logo.png" style="left:472px;top:23px;width:717px">
    <div class="fitbox" style="top:150px;height:230px;font:800 200px/230px Barlow,sans-serif"><span class="f">${seat.toUpperCase()||'-'}</span></div>
    <div class="fitbox" style="left:152px;width:1400px;top:360px;height:420px;font:700 440px/420px Barlow,sans-serif;color:var(${w<0?'--c4':'--c'+w})"><span class="g">${w<0?'-':CN[w]}</span></div>
-</div>${circles()}</div>`);
+</div>${circles()}${clockHTML()}</div>`);
   fit('.f',200);fit('.g',440)}
  else if(view=='lower'){
-  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),1)===''||isNaN(parseInt(cell(g,srow(g,i),1))))?'-':parseInt(cell(g,srow(g,i),1))}</u></div>`).join('')}</div></div></div>`)}
+  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),1)===''||isNaN(parseInt(cell(g,srow(g,i),1))))?'-':parseInt(cell(g,srow(g,i),1))}</u></div>`).join('')}</div></div>${clockHTML()}</div>`)}
  else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_ID?BUILD+' - live sheet connected.':'No SHEET_ID set in config.js - graphics show -.'}</p></div>`);
  tick()}
 let last=null,cached=localStorage.getItem('6n');
