@@ -17,7 +17,6 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .fitbox span{display:inline-block}
 .row{position:absolute;left:58px;width:1588px;height:114px;background:#fff;border-radius:16px}
 .row b{position:absolute;left:12px;line-height:114px;font:700 70px/114px 'Trebuchet MS',sans-serif}
-.row em{position:absolute;left:0;width:78px;font:700 26px/1 Barlow,sans-serif;font-style:normal;opacity:.9;top:50%;margin-top:-13px}
 .row i{position:absolute;left:1136px;top:13px;width:413px;height:88px;border-radius:12px;color:#fff;text-align:center;font:700 70px/88px 'Trebuchet MS',sans-serif}
 /* clock */
 .clock{position:absolute;left:0;top:37px;width:209px;height:163px;border-radius:0 20px 20px 0;overflow:hidden;font-weight:700;color:#fff;text-align:center}
@@ -35,7 +34,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 16 - 2PP pills';
+const BUILD='build 17 - 2PP pills v2';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -91,13 +90,13 @@ function sortP(A){const oth=A.find(x=>x[1]===4),rest=A.filter(x=>x!==oth).sort((
 function rows(vals,counted,title,id,ind,win,tpp){
  const L=P.map((p,i)=>[p[1],i,vals[i]]);if(ind!==undefined)L.splice(4,0,['INDEPENDENT',5,ind]);
  L.forEach((x,i)=>{const n=parseFloat(x[2]);x.k=isNaN(n)?-1:n;x.o=i});
- /* 2PP: only when exactly two parties have a 2PP count. Those two go first (higher 2PP on top), the rest follow in primary order. */
+ /* 2PP pills show only when exactly two parties have a 2PP count; row order is always by primary vote. */
  const reg=tpp?L.filter(x=>x[1]<5&&parseFloat(tpp[x[1]])>0):[],two=reg.length===2;
- let out;if(two){reg.forEach(x=>{x.t=parseFloat(tpp[x[1]]);x.tx=pc(tpp[x[1]])});const top=reg.slice().sort((a,b)=>b.t-a.t||a.o-b.o);out=top.concat(sortP(L.filter(x=>!top.includes(x))))}else out=sortP(L);
+ let out;if(two)reg.forEach(x=>{x.tx=pc(tpp[x[1]])});out=sortP(L);
  L.splice(0,L.length,...out);
  const six=L.length>5,h=six?98:114,pt=six?114:134,ph=six?76:88,fs=six?60:70;
  return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${[counted==='-'?(win?'':'-'):counted+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | ')}</div></div>`+
- `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px${six?';left:913px;width:280px':''}">${x[2]}</i>${two&&x.tx?`<i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:1209px;width:340px;padding-left:70px"><em>2PP</em>${x.tx}</i>`:''}</div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
+ `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px${six?';left:'+(two?973:1269)+'px;width:280px':''}">${x[2]}</i>${two&&x.tx?`<i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:1269px;width:280px">${x.tx}</i>`:''}</div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
 function render(g){
  detect(g);const counted=pc(cell(g,2,1));
  const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=(FRAC=[3,4,5,6,7,8].map(c=>cell(g,21,c)).filter(x=>x&&!x.includes('%')).map(parseFloat).reduce((a,b)=>a+b,0)<=1.01,[3,4,5,6,8].map(c=>pc(cell(g,21,c)))),indV=pc(cell(g,21,7)),seatCounted=pc(cell(g,21,9));
