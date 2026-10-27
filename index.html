@@ -34,7 +34,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 11 - fixed call layout';
+const BUILD='build 12 - call layout centred';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['LibNat','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -75,8 +75,8 @@ function putText(id,t,fonts,max,boxW,anchor,y){const el=document.getElementById(
  const m=tm(f,sz,t);el.textContent=t;el.style.fontFamily=f[0]+',sans-serif';el.style.fontWeight=f[1];el.style.fontSize=sz+'px';
  el.style.top=((anchor==='top'?y+m.cap:y)-(m.A-m.D)/2)+'px'}
 function placeCalled(seat,party){const go=()=>{
-  putText('sn',seat,[['Barlow',800]],200,1500,'bottom',316);
-  putText('pt',party,[['Barlow',700],["'Barlow Condensed'",700]],460,1560,'top',391)};
+  putText('sn',seat,[['Barlow',800]],200,1500,'bottom',344);
+  putText('pt',party,[['Barlow',700],["'Barlow Condensed'",700]],460,1560,'top',419)};
  Promise.all(['800 100px Barlow','700 100px Barlow','700 100px "Barlow Condensed"'].map(x=>document.fonts.load(x))).then(go,go);go()}
 function rows(vals,counted,title,id,ind){
  const L=P.map((p,i)=>[p[1],i,vals[i]]);if(ind!==undefined)L.splice(4,0,['INDEPENDENT',5,ind]);
