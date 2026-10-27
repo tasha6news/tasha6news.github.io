@@ -17,6 +17,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .fitbox span{display:inline-block}
 .row{position:absolute;left:58px;width:1588px;height:114px;background:#fff;border-radius:16px}
 .row b{position:absolute;left:12px;line-height:114px;font:700 70px/114px 'Trebuchet MS',sans-serif}
+.row em{position:absolute;left:0;width:78px;font:700 26px/1 Barlow,sans-serif;font-style:normal;opacity:.9;top:50%;margin-top:-13px}
 .row i{position:absolute;left:1136px;top:13px;width:413px;height:88px;border-radius:12px;color:#fff;text-align:center;font:700 70px/88px 'Trebuchet MS',sans-serif}
 /* clock */
 .clock{position:absolute;left:0;top:37px;width:209px;height:163px;border-radius:0 20px 20px 0;overflow:hidden;font-weight:700;color:#fff;text-align:center}
@@ -34,7 +35,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 15 - Coalition naming';
+const BUILD='build 16 - 2PP pills';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -43,7 +44,7 @@ const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
 /* Each block is requested separately so every column is one data type (Google's gviz nulls out
    cells whose type differs from the rest of the column) and rows never shift. [range, first sheet row, row count] */
-const BLOCKS=[['A2:B3',2,2],['A6:C10',6,5],['A21:J21',21,1]];
+const BLOCKS=[['A2:B3',2,2],['A6:C10',6,5],['A21:O21',21,1]];
 function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('bad response');
  const T=JSON.parse(m[1]).table,v=c=>c?(c.f!=null?String(c.f):(c.v!=null?String(c.v):'')):'';
  const g=T.rows.map(r=>T.cols.map((_,i)=>v((r.c||[])[i])));
@@ -84,21 +85,25 @@ function placeCalled(seat,party){const go=()=>{
   putText('pt',party,[f],sz,BW,'top',top);
   putText('sn',seat,[SF],ss,pw*.9,'top',top+pcap+GAP)};
  Promise.all(['800 100px Barlow','700 100px Barlow','700 100px "Barlow Condensed"'].map(x=>document.fonts.load(x))).then(go,go);go()}
-function rows(vals,counted,title,id,ind,win){
+/* Primary-vote order: Other is always last, unless it has votes and another category is still on 0/blank: then it sits above those */
+function sortP(A){const oth=A.find(x=>x[1]===4),rest=A.filter(x=>x!==oth).sort((a,b)=>b.k-a.k||a.o-b.o);if(!oth)return rest;
+ let at=rest.length;if(oth.k>0){const z=rest.findIndex(x=>x.k<=0);if(z>=0)at=z}rest.splice(at,0,oth);return rest}
+function rows(vals,counted,title,id,ind,win,tpp){
  const L=P.map((p,i)=>[p[1],i,vals[i]]);if(ind!==undefined)L.splice(4,0,['INDEPENDENT',5,ind]);
- L.forEach((x,i)=>{const n=parseFloat(x[2]);x.k=isNaN(n)?-1:n;x.o=i});const oth=L.find(x=>x[1]===4),rest=L.filter(x=>x!==oth).sort((a,b)=>b.k-a.k||a.o-b.o);
- /* Other is always last, unless it has votes and another category is still on 0/blank: then it sits above those */
- let at=rest.length;if(oth.k>0){const z=rest.findIndex(x=>x.k<=0);if(z>=0)at=z}
- rest.splice(at,0,oth);L.splice(0,L.length,...rest);
+ L.forEach((x,i)=>{const n=parseFloat(x[2]);x.k=isNaN(n)?-1:n;x.o=i});
+ /* 2PP: only when exactly two parties have a 2PP count. Those two go first (higher 2PP on top), the rest follow in primary order. */
+ const reg=tpp?L.filter(x=>x[1]<5&&parseFloat(tpp[x[1]])>0):[],two=reg.length===2;
+ let out;if(two){reg.forEach(x=>{x.t=parseFloat(tpp[x[1]]);x.tx=pc(tpp[x[1]])});const top=reg.slice().sort((a,b)=>b.t-a.t||a.o-b.o);out=top.concat(sortP(L.filter(x=>!top.includes(x))))}else out=sortP(L);
+ L.splice(0,L.length,...out);
  const six=L.length>5,h=six?98:114,pt=six?114:134,ph=six?76:88,fs=six?60:70;
  return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${[counted==='-'?(win?'':'-'):counted+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | ')}</div></div>`+
- `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px">${x[2]}</i></div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
+ `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px${six?';left:913px;width:280px':''}">${x[2]}</i>${two&&x.tx?`<i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:1209px;width:340px;padding-left:70px"><em>2PP</em>${x.tx}</i>`:''}</div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
 function render(g){
  detect(g);const counted=pc(cell(g,2,1));
  const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=(FRAC=[3,4,5,6,7,8].map(c=>cell(g,21,c)).filter(x=>x&&!x.includes('%')).map(parseFloat).reduce((a,b)=>a+b,0)<=1.01,[3,4,5,6,8].map(c=>pc(cell(g,21,c)))),indV=pc(cell(g,21,7)),seatCounted=pc(cell(g,21,9));
  if(view=='clock'){$(`<div class="stage">${clockHTML()}</div>`)}
  else if(view=='state'){detect(g);$(rows([0,1,2,3,4].map(i=>pc(cell(g,srow(g,i),2))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
- else if(view=='seat'){$(rows(sv,seatCounted,seat.toUpperCase()||'-','f',indV,inc?(KEYS[nk(inc)]!==undefined?CN[KEYS[nk(inc)]]:inc.toUpperCase()):''));fit('.f',105)}
+ else if(view=='seat'){$(rows(sv,seatCounted,seat.toUpperCase()||'-','f',indV,inc?(KEYS[nk(inc)]!==undefined?CN[KEYS[nk(inc)]]:inc.toUpperCase()):'',[10,11,12,13,14].map(c=>cell(g,21,c))));fit('.f',105)}
  else if(view=='called'){
   const k=KEYS[call.toLowerCase().replace(/[^a-z]/g,'')],w=call?(k===undefined?4:k):-1;
   $(`<div class="stage bg"><div class="card">
