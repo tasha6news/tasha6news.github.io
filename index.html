@@ -91,7 +91,7 @@ function rows(vals,counted,title,id,ind,win){
  let at=rest.length;if(oth.k>0){const z=rest.findIndex(x=>x.k<=0);if(z>=0)at=z}
  rest.splice(at,0,oth);L.splice(0,L.length,...rest);
  const six=L.length>5,h=six?98:114,pt=six?114:134,ph=six?76:88,fs=six?60:70;
- return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${[counted==='-'?(win?'':'-'):counted+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' - ')}</div></div>`+
+ return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${[counted==='-'?(win?'':'-'):counted+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | ')}</div></div>`+
  `<div class="abs" style="left:108px;top:44px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px">${x[2]}</i></div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
 function render(g){
  detect(g);const counted=pc(cell(g,2,1));
