@@ -34,7 +34,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 12 - call layout centred';
+const BUILD='build 13 - party fills width';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['LibNat','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -69,14 +69,18 @@ const circles=()=>[264,211,158,105,52].map((r,i)=>`<div class="circ" style="widt
 const fit=(sel,max)=>document.fonts.ready.then(()=>document.querySelectorAll(sel).forEach(s=>{let f=max;s.style.fontSize=f+'px';while(s.scrollWidth>s.parentElement.clientWidth&&f>20){f-=2;s.style.fontSize=f+'px'}}));
 /* Seat Called text: seat name baseline is fixed (it grows upward), party cap-top is fixed (it hangs down), so the gap never changes. */
 const CX=document.createElement('canvas').getContext('2d');
-function tm(f,size,t){CX.font=`${f[1]} ${size}px ${f[0]},sans-serif`;const m=CX.measureText(t),h=CX.measureText('H');return{w:m.width,cap:h.actualBoundingBoxAscent||size*.7,A:m.fontBoundingBoxAscent??size*.95,D:m.fontBoundingBoxDescent??size*.25}}
+function tm(f,size,t){CX.font=`${f[1]} ${size}px ${f[0]},sans-serif`;const m=CX.measureText(t),h=CX.measureText('H');return{w:(m.actualBoundingBoxLeft+m.actualBoundingBoxRight)||m.width,cap:h.actualBoundingBoxAscent||size*.7,A:m.fontBoundingBoxAscent??size*.95,D:m.fontBoundingBoxDescent??size*.25}}
 function putText(id,t,fonts,max,boxW,anchor,y){const el=document.getElementById(id);if(!el)return;let f=fonts[0],sz=max;
  for(const x of fonts){f=x;sz=max;if(tm(x,sz,t).w<=boxW)break;if(x===fonts[fonts.length-1])sz=Math.max(20,Math.floor(max*boxW/tm(x,max,t).w))}
  const m=tm(f,sz,t);el.textContent=t;el.style.fontFamily=f[0]+',sans-serif';el.style.fontWeight=f[1];el.style.fontSize=sz+'px';
  el.style.top=((anchor==='top'?y+m.cap:y)-(m.A-m.D)/2)+'px'}
 function placeCalled(seat,party){const go=()=>{
-  putText('sn',seat,[['Barlow',800]],200,1500,'bottom',344);
-  putText('pt',party,[['Barlow',700],["'Barlow Condensed'",700]],460,1560,'top',419)};
+  const F1=['Barlow',700],F2=["'Barlow Condensed'",700],BW=1560;let f=F1,sz=BW/tm(F1,100,party).w*100;
+  if(sz<400){f=F2;sz=BW/tm(F2,100,party).w*100} /* names too wide for Barlow Bold at a good height use the condensed cut */
+  sz=party==='-'?460:Math.min(600,Math.floor(sz));
+  const pw=party==='-'?BW:tm(f,sz,party).w; /* party fills the full width; seat name is capped at 90% of it */
+  putText('pt',party,[f],sz,BW,'top',395);
+  putText('sn',seat,[['Barlow',800]],200,pw*0.9,'bottom',320)};
  Promise.all(['800 100px Barlow','700 100px Barlow','700 100px "Barlow Condensed"'].map(x=>document.fonts.load(x))).then(go,go);go()}
 function rows(vals,counted,title,id,ind){
  const L=P.map((p,i)=>[p[1],i,vals[i]]);if(ind!==undefined)L.splice(4,0,['INDEPENDENT',5,ind]);
