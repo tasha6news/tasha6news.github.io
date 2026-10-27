@@ -34,10 +34,10 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 14 - party above seat';
+const BUILD='build 15 - Coalition naming';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
-const P=[['Labor','LABOR','LABOR'],['LibNat','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
-const KEYS={labor:0,alp:0,libnat:1,liberal:1,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
+const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
+const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
 const DEMO='';
 const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
@@ -54,7 +54,7 @@ function parseCSV(t){const r=[];let row=[],c='',q=false;for(let i=0;i<t.length;i
 const cell=(g,r,c)=>((g[r-1]||[])[c]||'').trim();
 let FRAC=false;
 function pc(v,d){if(v==='')return '-';const n=parseFloat(v.replace(/[%,]/g,''));if(isNaN(n))return '-';return (FRAC&&!v.includes('%')?n*100:n).toFixed(2)+'%'}
-const SKEY=['labor','libnat','greens','onenation','other'];
+const SKEY=['labor','coalition','greens','onenation','other'];
 const nk=x=>(x||'').toLowerCase().replace(/[^a-z]/g,'');
 function srow(g,i){for(let r=6;r<=10;r++){const k=nk(cell(g,r,0));if(k===SKEY[i]||(i===2&&k==='green')||(i===4&&k==='others'))return r}return 6+i}
 function detect(g){const v=[6,7,8,9,10].map(r=>cell(g,r,2)).filter(x=>x&&!x.includes('%')).map(parseFloat);FRAC=v.length>0&&v.reduce((a,b)=>a+b,0)<=1.01}
