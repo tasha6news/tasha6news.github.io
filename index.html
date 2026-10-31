@@ -34,7 +34,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 19 - Barlow only';
+const BUILD='build 20 - state clock';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -59,8 +59,8 @@ const nk=x=>(x||'').toLowerCase().replace(/[^a-z]/g,'');
 function srow(g,i){for(let r=6;r<=10;r++){const k=nk(cell(g,r,0));if(k===SKEY[i]||(i===2&&k==='green')||(i===4&&k==='others'))return r}return 6+i}
 function detect(g){const v=[6,7,8,9,10].map(r=>cell(g,r,2)).filter(x=>x&&!x.includes('%')).map(parseFloat);FRAC=v.length>0&&v.reduce((a,b)=>a+b,0)<=1.01}
 const clockHTML=()=>`<div class="clock"><div class="live">LIVE</div><img src="assets/dark_logo.jpg"><div class="time" id="t">--:-- AEDT</div></div>`;
-/* Rotates through Australian time zones; AEDT is held twice as long. Based on the wall clock so every graphic stays in sync. */
-const ZONES=[['AEST','Australia/Brisbane',3000],['AEDT','Australia/Melbourne',6000],['ACDT','Australia/Adelaide',3000],['ACST','Australia/Darwin',3000],['AWST','Australia/Perth',3000]];
+/* Rotates through the states (3s each), showing each state's local time. Based on the wall clock so every graphic stays in sync. */
+const ZONES=[['TAS','Australia/Hobart',3000],['VIC','Australia/Melbourne',3000],['NSW','Australia/Sydney',3000],['ACT','Australia/Sydney',3000],['QLD','Australia/Brisbane',3000],['SA','Australia/Adelaide',3000],['NT','Australia/Darwin',3000],['WA','Australia/Perth',3000]];
 const ZTOTAL=ZONES.reduce((a,z)=>a+z[2],0),FMT={};
 function tick(){const e=document.getElementById('t');if(!e)return;let p=Date.now()%ZTOTAL,z=ZONES[0];for(const q of ZONES){if(p<q[2]){z=q;break}p-=q[2]}
  const f=FMT[z[1]]||(FMT[z[1]]=new Intl.DateTimeFormat('en-AU',{timeZone:z[1],hour:'2-digit',minute:'2-digit',hour12:false}));
