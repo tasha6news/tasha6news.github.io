@@ -109,7 +109,7 @@ function seatRows(g,seat,win){
  const cnt=rest.filter(x=>x.n).length+[nm(13),nm(20)].reduce((a,t)=>a+t.split(';').filter(z=>z.trim()).length,0);
  const reg=L.filter(x=>x.t>0),two=reg.length===2; /* 2CP pills only when exactly two parties have a 2CP result */
  const R6=top.map(x=>({big:x.n?esc(fmtName(x.n.split(';')[0].replace(/\s*\([^)]*\)\s*$/,''))):x.lab.toUpperCase(),sub:x.n?x.lab.toUpperCase():'',col:x.col,v:fm(x.v),t:two&&x.t>0?fm(x.t):''}));
- R6.push({big:'OTHER',sub:known&&cnt?cnt+(cnt===1?' CANDIDATE':' CANDIDATES'):'',col:'#191919',v:fm(ov.length?ov.reduce((a,b)=>a+b,0):NaN),t:''});
+ R6.push({big:'OTHER',sub:known&&cnt?cnt+(cnt===1?' CANDIDATE':' CANDIDATES'):'',col:'#393939',v:fm(ov.length?ov.reduce((a,b)=>a+b,0):NaN),t:''});
  const h=98,pt=114,ph=76,fs=60,pill=(x,left,v)=>`<i style="background:${x.col};color:${darkText(x.col)?'#111':'#fff'};top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:${left}px;width:280px">${v}</i>`;
  const inner=R6.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px">${x.sub?`<b style="color:${x.col};top:${(h-82)/2}px;line-height:1;font-size:52px"><div class="nmbox"><span class="nm">${x.big}</span></div><div class="sub">${x.sub}</div></b>`:`<b style="color:${x.col};line-height:${h}px;font-size:${fs}px">${x.big}</b>`}${pill(x,two?973:1269,x.v)}${x.t?pill(x,1269,x.t):''}</div>`).join('');
  const sc=pc(cell(g,R,37));
