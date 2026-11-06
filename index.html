@@ -16,6 +16,9 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .fitbox{position:absolute;left:326px;width:1052px;text-align:center;white-space:nowrap}
 .fitbox span{display:inline-block}
 .row{position:absolute;left:58px;width:1588px;height:114px;background:#fff;border-radius:16px}
+.nmbox{width:880px;height:54px;line-height:54px;font-size:52px;white-space:nowrap}
+.nm{display:inline-block}
+.sub{font-size:28px;line-height:28px;white-space:nowrap}
 .row b{position:absolute;left:12px;line-height:114px;font:700 70px/114px Barlow,sans-serif}
 .row i{position:absolute;left:1136px;top:13px;width:413px;height:88px;border-radius:12px;color:#fff;text-align:center;font:700 70px/88px Barlow,sans-serif}
 /* clock */
@@ -34,7 +37,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 22 - 2CP columns K-P';
+const BUILD='build 23 - new sheet layout';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -43,7 +46,12 @@ const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
 /* Each block is requested separately so every column is one data type (Google's gviz nulls out
    cells whose type differs from the rest of the column) and rows never shift. [range, first sheet row, row count] */
-const BLOCKS=[['A2:B3',2,2],['A6:C10',6,5],['A21:P21',21,1]];
+const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AM14',14,1],['A15:U15',15,1]]; /* LiveStream: counted | assembly table | selected seat | its candidate names */
+/* Seat results categories, in sheet order: [name, colour, primary column]. 2CP column = 21 + index. Other Independents = col 13, Other = col 20. */
+const CATS=[['Labor','#F00011',3],['Liberals','#080CAB',4],['Nationals','#137c46',5],['Greens','#10C25B',6],['One Nation','#ff6d00',7],['Victorian Socialists','#000000',8],['Family First','#5A58A6',9],['Animal Justice','#5B2C86',10],['Libertarian','#fec327',11],['Independent','#888888',12],['Socialist Alliance','#990000',14],['Legalise Cannabis','#72C342',15],['The Republican','#022168',16],['The West Party','#499567',17],['Shooters, Fishers & Farmers','#E52B50',18],['Citizens Party','#666600',19]];
+const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const fmtName=t=>{t=t.trim();const i=t.indexOf(',');return (i>0?t.slice(i+1).trim()+' '+t.slice(0,i).trim():t).toUpperCase()}; /* "SURNAME, Given" -> "GIVEN SURNAME" */
+const darkText=c=>{const n=parseInt(c.slice(1),16);return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255>0.6}; /* light party colours get dark text on the pill */
 function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('bad response');
  const T=JSON.parse(m[1]).table,v=c=>c?(c.f!=null?String(c.f):(c.v!=null?String(c.v):'')):'';
  const g=T.rows.map(r=>T.cols.map((_,i)=>v((r.c||[])[i])));
@@ -56,8 +64,8 @@ let FRAC=false;
 function pc(v,d){if(v==='')return '-';const n=parseFloat(v.replace(/[%,]/g,''));if(isNaN(n))return '-';return (FRAC&&!v.includes('%')?n*100:n).toFixed(2)+'%'}
 const SKEY=['labor','coalition','greens','onenation','other'];
 const nk=x=>(x||'').toLowerCase().replace(/[^a-z]/g,'');
-function srow(g,i){for(let r=6;r<=10;r++){const k=nk(cell(g,r,0));if(k===SKEY[i]||(i===2&&k==='green')||(i===4&&k==='others'))return r}return 6+i}
-function detect(g){const v=[6,7,8,9,10].map(r=>cell(g,r,2)).filter(x=>x&&!x.includes('%')).map(parseFloat);FRAC=v.length>0&&v.reduce((a,b)=>a+b,0)<=1.01}
+function srow(g,i){for(let r=7;r<=11;r++){const k=nk(cell(g,r,0));if(k===SKEY[i]||(i===2&&k==='green')||(i===4&&k==='others'))return r}return 7+i}
+function detect(g){const v=[7,8,9,10,11].map(r=>cell(g,r,1)).filter(x=>x&&!x.includes('%')).map(parseFloat);FRAC=v.length>0&&v.reduce((a,b)=>a+b,0)<=1.01}
 const clockHTML=()=>`<div class="clock"><div class="live">LIVE</div><img src="assets/dark_logo.jpg"><div class="time" id="t">--:-- AEDT</div></div>`;
 /* Rotates through the states (3s each), showing each state's local time. Based on the wall clock so every graphic stays in sync. */
 const ZONES=[['TAS','Australia/Hobart',3000],['VIC','Australia/Melbourne',3000],['NSW','Australia/Sydney',3000],['ACT','Australia/Sydney',3000],['QLD','Australia/Brisbane',3000],['SA','Australia/Adelaide',3000],['NT','Australia/Darwin',3000],['WA','Australia/Perth',3000]];
@@ -87,22 +95,32 @@ function placeCalled(seat,party){const go=()=>{
 /* Primary-vote order: Other is always last, unless it has votes and another category is still on 0/blank: then it sits above those */
 function sortP(A){const oth=A.find(x=>x[1]===4),rest=A.filter(x=>x!==oth).sort((a,b)=>b.k-a.k||a.o-b.o);if(!oth)return rest;
  let at=rest.length;if(oth.k>0){const z=rest.findIndex(x=>x.k<=0);if(z>=0)at=z}rest.splice(at,0,oth);return rest}
-function rows(vals,counted,title,id,ind,win,tpp){
- const L=P.map((p,i)=>[p[1],i,vals[i]]);if(ind!==undefined)L.splice(4,0,['INDEPENDENT',5,ind]);
- L.forEach((x,i)=>{const n=parseFloat(x[2]);x.k=isNaN(n)?-1:n;x.o=i});
- /* 2PP pills show only when exactly two parties have a 2PP count; row order is always by primary vote. */
- const reg=tpp?L.filter(x=>parseFloat(tpp[x[1]])>0):[],two=reg.length===2;
- let out;if(two)reg.forEach(x=>{x.tx=pc(tpp[x[1]])});out=sortP(L);
- L.splice(0,L.length,...out);
- const six=L.length>5,h=six?98:114,pt=six?114:134,ph=six?76:88,fs=six?60:70;
- return `<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${[counted==='-'?(win?'':'-'):counted+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | ')}</div></div>`+
- `<div class="abs" style="left:108px;top:67px">${L.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px"><b style="color:var(--c${x[1]});line-height:${h}px;font-size:${fs}px">${x[0]}</b><i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px${six?';left:'+(two?973:1269)+'px;width:280px':''}">${x[2]}</i>${two&&x.tx?`<i style="background:var(--c${x[1]});top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:1269px;width:280px">${x.tx}</i>`:''}</div>`).join('')}</div>${circles()}${clockHTML()}</div>`}
+const cardHTML=(title,id,cnt,inner)=>`<div class="stage bg"><div class="card"><div class="fitbox" style="top:54px;height:110px;font:800 105px/110px Barlow,sans-serif;color:#000"><span class="${id}">${title}</span></div><div class="cnt">${cnt}</div></div><div class="abs" style="left:108px;top:67px">${inner}</div>${circles()}${clockHTML()}</div>`;
+function rows(vals,counted,title,id){ /* Legislative Assembly: 5 rows */
+ const L=P.map((p,i)=>[p[1],i,vals[i]]);L.forEach((x,i)=>{const n=parseFloat(x[2]);x.k=isNaN(n)?-1:n;x.o=i});
+ return cardHTML(title,id,counted==='-'?'-':counted+' COUNTED',sortP(L).map((x,i)=>`<div class="row" style="top:${220+134*i}px;height:114px"><b style="color:var(--c${x[1]});line-height:114px;font-size:70px">${x[0]}</b><i style="background:var(--c${x[1]});top:13px;height:88px;line-height:88px;font-size:70px">${x[2]}</i></div>`).join(''))}
+/* Individual seat: top 5 parties by primary vote + Other (everything else). Row 14 = results, row 15 = candidate names. */
+function seatRows(g,seat,win){
+ const R=14,num=c=>{const v=cell(g,R,c);if(v==='')return NaN;const n=parseFloat(v.replace(/[%,]/g,''));return isNaN(n)?NaN:(FRAC&&!v.includes('%')?n*100:n)},fm=n=>isNaN(n)?'-':n.toFixed(2)+'%',nm=c=>cell(g,15,c);
+ const known=CATS.some(x=>nm(x[2]))||nm(13)||nm(20);
+ const L=CATS.map((x,i)=>({i,lab:x[0],col:x[1],c:x[2],v:num(x[2]),n:nm(x[2]),t:num(21+i)}));
+ const top=L.filter(x=>!known||x.n||x.v>0).sort((a,b)=>((isNaN(b.v)?-1:b.v)-(isNaN(a.v)?-1:a.v))||a.i-b.i).slice(0,5); /* no results: sheet order is kept */
+ const rest=L.filter(x=>!top.includes(x)),ov=[...rest.map(x=>x.v),num(13),num(20)].filter(v=>!isNaN(v));
+ const cnt=rest.filter(x=>x.n).length+[nm(13),nm(20)].reduce((a,t)=>a+t.split(';').filter(z=>z.trim()).length,0);
+ const reg=L.filter(x=>x.t>0),two=reg.length===2; /* 2CP pills only when exactly two parties have a 2CP result */
+ const R6=top.map(x=>({big:x.n?esc(fmtName(x.n.split(';')[0].replace(/\s*\([^)]*\)\s*$/,''))):x.lab.toUpperCase(),sub:x.n?x.lab.toUpperCase():'',col:x.col,v:fm(x.v),t:two&&x.t>0?fm(x.t):''}));
+ R6.push({big:'OTHER',sub:known&&cnt?cnt+(cnt===1?' CANDIDATE':' CANDIDATES'):'',col:'#191919',v:fm(ov.length?ov.reduce((a,b)=>a+b,0):NaN),t:''});
+ const h=98,pt=114,ph=76,fs=60,pill=(x,left,v)=>`<i style="background:${x.col};color:${darkText(x.col)?'#111':'#fff'};top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:${left}px;width:280px">${v}</i>`;
+ const inner=R6.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px">${x.sub?`<b style="color:${x.col};top:${(h-82)/2}px;line-height:1;font-size:52px"><div class="nmbox"><span class="nm">${x.big}</span></div><div class="sub">${x.sub}</div></b>`:`<b style="color:${x.col};line-height:${h}px;font-size:${fs}px">${x.big}</b>`}${pill(x,two?973:1269,x.v)}${x.t?pill(x,1269,x.t):''}</div>`).join('');
+ const sc=pc(cell(g,R,37));
+ return cardHTML(seat.toUpperCase()||'-','f',[sc==='-'?(win?'':'-'):sc+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | '),inner)}
 function render(g){
- detect(g);const counted=pc(cell(g,2,1));
- const seat=cell(g,21,0),inc=cell(g,21,1),call=cell(g,21,2),sv=(FRAC=[3,4,5,6,7,8].map(c=>cell(g,21,c)).filter(x=>x&&!x.includes('%')).map(parseFloat).reduce((a,b)=>a+b,0)<=1.01,[3,4,5,6,8].map(c=>pc(cell(g,21,c)))),indV=pc(cell(g,21,7)),seatCounted=pc(cell(g,21,9));
+ detect(g);const counted=pc(cell(g,4,1));
+ const seat=cell(g,14,0),inc=cell(g,14,1),call=cell(g,14,2);
  if(view=='clock'){$(`<div class="stage">${clockHTML()}</div>`)}
- else if(view=='state'){detect(g);$(rows([0,1,2,3,4].map(i=>pc(cell(g,srow(g,i),2))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
- else if(view=='seat'){$(rows(sv,seatCounted,seat.toUpperCase()||'-','f',indV,inc?(KEYS[nk(inc)]!==undefined?CN[KEYS[nk(inc)]]:inc.toUpperCase()):'',[10,11,12,13,15,14].map(c=>cell(g,21,c))));fit('.f',105)}
+ else if(view=='state'){detect(g);$(rows([0,1,2,3,4].map(i=>pc(cell(g,srow(g,i),1))),counted,'LEGISLATIVE ASSEMBLY','f'));fit('.f',105)}
+ else if(view=='seat'){FRAC=[...Array(18)].map((_,j)=>cell(g,14,3+j)).filter(x=>x&&!x.includes('%')).map(parseFloat).reduce((a,b)=>a+b,0)<=1.01;
+  $(seatRows(g,seat,inc?(KEYS[nk(inc)]!==undefined?CN[KEYS[nk(inc)]]:inc.toUpperCase()):''));fit('.f',105);fit('.nm',52)}
  else if(view=='called'){
   const k=KEYS[call.toLowerCase().replace(/[^a-z]/g,'')],w=call?(k===undefined?4:k):-1;
   $(`<div class="stage bg"><div class="card">
@@ -112,19 +130,19 @@ function render(g){
   const ik=KEYS[nk(inc)],pre=(w>=0&&ik!==undefined)?(w===ik?'HOLD ':'GAIN '):'';
   placeCalled(pre+(seat.toUpperCase()||'-'),w<0?'-':CN[w])}
  else if(view=='lower'){
-  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),1)===''||isNaN(parseInt(cell(g,srow(g,i),1))))?'-':parseInt(cell(g,srow(g,i),1))}</u></div>`).join('')}</div></div>${clockHTML()}</div>`)}
+  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),2)===''||isNaN(parseInt(cell(g,srow(g,i),2))))?'-':parseInt(cell(g,srow(g,i),2))}</u></div>`).join('')}</div></div>${clockHTML()}</div>`)}
  else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_ID?BUILD+' - live sheet connected.':'No SHEET_ID set in config.js - graphics show -.'}</p></div>`);
  tick()}
 let last=null,cached=localStorage.getItem('6n');
 function draw(t){if(t===last)return;last=t;render(t?JSON.parse(t):[[]])}
-const gurl=rg=>`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(CONFIG.SHEET_NAME||'LiveStreamData')}&_=${Date.now()}`;
+const gurl=rg=>`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(CONFIG.LIVE_TAB||'LiveStream')}&_=${Date.now()}`;
 const url=()=>CONFIG.SHEET_ID;
 async function poll(){
  try{if(!url())draw(DEMO);else{
   const res=await Promise.all(BLOCKS.map(async([rg,s0,n])=>{const r=await fetch(gurl(rg),{cache:'no-store'});if(!r.ok)throw 0;return [s0,parseSheet(await r.text(),n)]}));
   const g=[];res.forEach(([s0,rows])=>rows.forEach((r,i)=>g[s0-1+i]=r));for(let i=0;i<g.length;i++)g[i]=g[i]||[];
   const t=JSON.stringify(g);localStorage.setItem('6n',t);draw(t);
-  if(new URLSearchParams(location.search).get('debug')){let d=document.getElementById('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px';document.body.appendChild(d)}d.textContent=BUILD+'\n'+[2,3,6,7,8,9,10,21].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n')}}}
+  if(new URLSearchParams(location.search).get('debug')){let d=document.getElementById('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px';document.body.appendChild(d)}d.textContent=BUILD+'\n'+[4,7,8,9,10,11,14,15].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n')}}}
  catch(e){console.error('Sheet fetch failed',e);if(last===null)draw(cached||'')} /* on error keep last good data on screen */
  setTimeout(poll,CONFIG.POLL_MS||2000)}
 if(cached&&url())draw(cached);
