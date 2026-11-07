@@ -40,7 +40,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 25 - 2CP lower third';
+const BUILD='build 27 - no seat animation';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -119,7 +119,7 @@ function seatRows(g,seat,win){
  return cardHTML(seat.toUpperCase()||'-','f',[sc==='-'?(win?'':'-'):sc+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | '),inner)}
 /* ---------- Lower third: normal / "Show 2CP" (LiveStream!B17), portal animation between layouts ---------- */
 const SHORT=['ALP','L/NP','GRN','ONP','OTH'];
-let LASTG=null,ALL={full:[],cands:[]},allTs=0;const LT={built:null,busy:false,seat:null,deck:null};
+let LASTG=null,ALL={full:[],cands:[]},allTs=0;const LT={built:null,busy:false,seat:null,deck:null,seatTs:0}; /* seatTs = when the current seat finished appearing */
 async function loadAll(){const f=async(rg,sh)=>{const r=await fetch(gurl(rg,sh),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return parseSheet(await r.text(),88)};
  const [a,b]=await Promise.all([f('A2:AM89',CONFIG.RESULTS_TAB||'FullResults'),f('A2:S89',CONFIG.CANDS_TAB||'Candidates')]);ALL={full:a,cands:b};allTs=Date.now()}
 const lighten=c=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.substr(i,2),16)*.67+255*.33).toString(16).padStart(2,'0')).join('');
@@ -145,11 +145,12 @@ function portal(el,swap,done){el.style.transition='transform .5s cubic-bezier(.5
  setTimeout(()=>{swap();el.style.transition='none';void el.offsetHeight;el.style.transition='transform .55s cubic-bezier(0,.55,.45,1)';el.style.transform='translateY(0)';setTimeout(done,600)},540)}
 function initRB(){if(!LT.seat||!eligible().includes(LT.seat))LT.seat=nextSeat();fillRB()}
 function lowerUpdate(){const g=LASTG;if(!g)return;const two=layoutTwo(g);let el=document.getElementById('ltin');
- if(!el){$(`<div class="stage"><div class="portal"><div id="ltin">${ltHTML(two)}</div></div>${clockHTML()}</div>`);LT.built=two;if(two)initRB()}
- else if(two!==LT.built&&!LT.busy){LT.busy=true;portal(el,()=>{LT.built=layoutTwo(LASTG);el.innerHTML=ltHTML(LT.built);if(LT.built)initRB()},()=>{LT.busy=false})}
- if(!LT.busy){fillLeft(g);if(LT.built){if(!LT.seat||!eligible().includes(LT.seat))LT.seat=nextSeat();fillRB()}}}
-setInterval(()=>{const rb=document.getElementById('rb');if(view!=='lower'||!rb||LT.busy||!LT.built)return;const nx=nextSeat();if(!nx)return;
- LT.busy=true;portal(rb,()=>{LT.seat=nx;fillRB()},()=>{LT.busy=false})},CONFIG.TCP_ROTATE_MS||10000);
+ if(!el){$(`<div class="stage"><div class="portal"><div id="ltin">${ltHTML(two)}</div></div>${clockHTML()}</div>`);LT.built=two;if(two){initRB();LT.seatTs=Date.now()}}
+ else if(two!==LT.built&&!LT.busy){LT.busy=true;portal(el,()=>{LT.built=layoutTwo(LASTG);el.innerHTML=ltHTML(LT.built);if(LT.built)initRB()},()=>{LT.busy=false;LT.seatTs=Date.now()})}
+ if(!LT.busy){fillLeft(g);if(LT.built){if(!LT.seat||!eligible().includes(LT.seat)){LT.seat=nextSeat();LT.seatTs=Date.now()}fillRB()}}}
+setInterval(()=>{const rb=document.getElementById('rb');if(view!=='lower'||!rb||LT.busy||!LT.built)return;
+ if(Date.now()-LT.seatTs<(CONFIG.TCP_ROTATE_MS||10000))return;               /* a seat always stays up for the full time, counted from when it appeared */
+ const nx=nextSeat();if(!nx)return;LT.seat=nx;LT.seatTs=Date.now();fillRB()},500); /* seat changes just swap the data, no animation */
 function render(g){
  detect(g);const counted=pc(cell(g,4,1));
  const seat=cell(g,14,0),inc=cell(g,14,1),call=cell(g,14,2);
