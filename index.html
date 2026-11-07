@@ -27,7 +27,10 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .clock img{display:block;width:209px;height:88px;object-fit:cover}
 .clock .time{height:38px;line-height:38px;background:#3ba5e6;font-size:27px}
 /* lower third */
-.lt{position:absolute;left:108px;top:925px;width:1704px;height:110px;border-radius:20px;background:linear-gradient(90deg,#18bff4,#2578bd)}
+.portal{position:absolute;left:0;top:925px;width:1920px;height:110px;overflow:hidden}
+#ltin{position:absolute;left:0;top:0;width:1920px;height:110px}
+.pn{display:inline-block;white-space:nowrap}
+.lt{position:absolute;left:108px;top:0;width:1704px;height:110px;border-radius:20px;background:linear-gradient(90deg,#18bff4,#2578bd)}
 .lt h1{position:absolute;left:33px;top:0;font:700 40px/50px Barlow,sans-serif;color:#fff}
 .win{position:absolute;left:1496px;top:8px;width:175px;height:38px;border-radius:14px;background:#0a0d17;color:#fff;text-align:center;font:700 25px/38px Barlow,sans-serif}
 .pills{position:absolute;left:32px;top:54px;width:1639px;display:flex;gap:29px}
@@ -37,7 +40,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 23 - new sheet layout';
+const BUILD='build 25 - 2CP lower third';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -46,13 +49,13 @@ const view=new URLSearchParams(location.search).get('view');
 const $=h=>document.getElementById('app').innerHTML=h;
 /* Each block is requested separately so every column is one data type (Google's gviz nulls out
    cells whose type differs from the rest of the column) and rows never shift. [range, first sheet row, row count] */
-const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AM14',14,1],['A15:U15',15,1]]; /* LiveStream: counted | assembly table | selected seat | its candidate names */
+const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AM14',14,1],['A15:U15',15,1],['A17:B17',17,1]]; /* LiveStream: counted | assembly table | selected seat | its candidate names */
 /* Seat results categories, in sheet order: [name, colour, primary column]. 2CP column = 21 + index. Other Independents = col 13, Other = col 20. */
-const CATS=[['Labor','#F00011',3],['Liberals','#080CAB',4],['Nationals','#137c46',5],['Greens','#009c3d',6],['One Nation','#ff6d00',7],['Victorian Socialists','#000000',8],['Family First','#5A58A6',9],['Animal Justice','#5B2C86',10],['Libertarian','#fec327',11],['Independent','#888888',12],['Socialist Alliance','#990000',14],['Legalise Cannabis','#72C342',15],['The Republican','#022168',16],['The West Party','#499567',17],['Shooters, Fishers & Farmers','#E52B50',18],['Citizens Party','#666600',19]];
+const CATS=[['Labor','#F00011',3],['Liberals','#080CAB',4],['Nationals','#137c46',5],['Greens','#10C25B',6],['One Nation','#ff6d00',7],['Victorian Socialists','#000000',8],['Family First','#5A58A6',9],['Animal Justice','#5B2C86',10],['Libertarian','#fec327',11],['Independent','#888888',12],['Socialist Alliance','#990000',14],['Legalise Cannabis','#72C342',15],['The Republican','#022168',16],['The West Party','#499567',17],['Shooters, Fishers & Farmers','#E52B50',18],['Citizens Party','#666600',19]];
 const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const fmtName=t=>{t=t.trim();const i=t.indexOf(',');return (i>0?t.slice(i+1).trim()+' '+t.slice(0,i).trim():t).toUpperCase()}; /* "SURNAME, Given" -> "GIVEN SURNAME" */
 const darkText=c=>{const n=parseInt(c.slice(1),16);return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255>0.6}; /* light party colours get dark text on the pill */
-function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('bad response');
+function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);if(!m)throw new Error('Google did not return sheet data (sheet not shared as "Anyone with the link", wrong sheet ID, or wrong tab name)');
  const T=JSON.parse(m[1]).table,v=c=>c?(c.f!=null?String(c.f):(c.v!=null?String(c.v):'')):'';
  const g=T.rows.map(r=>T.cols.map((_,i)=>v((r.c||[])[i])));
  const h=T.cols.map(c=>c.label||'');
@@ -109,11 +112,44 @@ function seatRows(g,seat,win){
  const cnt=rest.filter(x=>x.n).length+[nm(13),nm(20)].reduce((a,t)=>a+t.split(';').filter(z=>z.trim()).length,0);
  const reg=L.filter(x=>x.t>0),two=reg.length===2; /* 2CP pills only when exactly two parties have a 2CP result */
  const R6=top.map(x=>({big:x.n?esc(fmtName(x.n.split(';')[0].replace(/\s*\([^)]*\)\s*$/,''))):x.lab.toUpperCase(),sub:x.n?x.lab.toUpperCase():'',col:x.col,v:fm(x.v),t:two&&x.t>0?fm(x.t):''}));
- R6.push({big:'OTHER',sub:known&&cnt?cnt+(cnt===1?' CANDIDATE':' CANDIDATES'):'',col:'#393939',v:fm(ov.length?ov.reduce((a,b)=>a+b,0):NaN),t:''});
+ R6.push({big:'OTHER',sub:known&&cnt?cnt+(cnt===1?' CANDIDATE':' CANDIDATES'):'',col:'#191919',v:fm(ov.length?ov.reduce((a,b)=>a+b,0):NaN),t:''});
  const h=98,pt=114,ph=76,fs=60,pill=(x,left,v)=>`<i style="background:${x.col};color:${darkText(x.col)?'#111':'#fff'};top:${(h-ph)/2}px;height:${ph}px;line-height:${ph}px;font-size:${fs}px;left:${left}px;width:280px">${v}</i>`;
  const inner=R6.map((x,i)=>`<div class="row" style="top:${220+pt*i}px;height:${h}px">${x.sub?`<b style="color:${x.col};top:${(h-82)/2}px;line-height:1;font-size:52px"><div class="nmbox"><span class="nm">${x.big}</span></div><div class="sub">${x.sub}</div></b>`:`<b style="color:${x.col};line-height:${h}px;font-size:${fs}px">${x.big}</b>`}${pill(x,two?973:1269,x.v)}${x.t?pill(x,1269,x.t):''}</div>`).join('');
  const sc=pc(cell(g,R,37));
  return cardHTML(seat.toUpperCase()||'-','f',[sc==='-'?(win?'':'-'):sc+' COUNTED',win?'2022 WINNER: '+win:''].filter(Boolean).join(' | '),inner)}
+/* ---------- Lower third: normal / "Show 2CP" (LiveStream!B17), portal animation between layouts ---------- */
+const SHORT=['ALP','L/NP','GRN','ONP','OTH'];
+let LASTG=null,ALL={full:[],cands:[]},allTs=0;const LT={built:null,busy:false,seat:null,deck:null};
+async function loadAll(){const f=async(rg,sh)=>{const r=await fetch(gurl(rg,sh),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return parseSheet(await r.text(),88)};
+ const [a,b]=await Promise.all([f('A2:AM89',CONFIG.RESULTS_TAB||'FullResults'),f('A2:S89',CONFIG.CANDS_TAB||'Candidates')]);ALL={full:a,cands:b};allTs=Date.now()}
+const lighten=c=>'#'+[1,3,5].map(i=>Math.round(parseInt(c.substr(i,2),16)*.67+255*.33).toString(16).padStart(2,'0')).join('');
+const lastName=t=>{t=(t||'').split(';')[0].replace(/\s*\([^)]*\)\s*$/,'').trim();if(!t)return '';const i=t.indexOf(',');return (i>0?t.slice(0,i):t.split(/\s+/).pop()).trim().toUpperCase()};
+function fitW(el,max,w){let f=max;el.style.fontSize=f+'px';while(el.getBoundingClientRect().width>w&&f>12){f-=1;el.style.fontSize=f+'px'}}
+function tcpOf(r){const v=CATS.map((_,i)=>{const s=String(r[21+i]||''),n=parseFloat(s.replace(/[%,]/g,''));return{i,n,pct:s.includes('%')}}).filter(x=>x.n>0);
+ if(v.length!==2)return null;const k=(!v[0].pct&&v[0].n+v[1].n<=1.01)?100:1;return v.map(x=>({i:x.i,p:x.n*k}))} /* exactly two 2CP values = a seat with 2CP data */
+const eligible=()=>ALL.full.filter(r=>r[0]&&tcpOf(r)).map(r=>r[0]);
+function nextSeat(){const el=eligible();if(!el.length)return null;LT.deck=(LT.deck||[]).filter(x=>el.includes(x));
+ if(!LT.deck.length){LT.deck=el.slice().sort(()=>Math.random()-.5);if(el.length>1&&LT.deck[LT.deck.length-1]===LT.seat)LT.deck.reverse()} /* shuffled deck: random order, no repeats until all shown */
+ return LT.deck.pop()}
+const layoutTwo=g=>/show/i.test(cell(g,17,1))&&eligible().length>0;
+function ltHTML(two){return `<div class="lt" style="width:${two?1000:1704}px"><h1>VICTORIA DECIDES</h1><div class="win" style="left:${two?792:1496}px">TO WIN: 45</div><div class="pills" style="width:${two?955:1639}px;gap:${two?17:29}px">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})"><span>${two?SHORT[i]:p[2]}</span><u id="lp${i}" style="background:var(--l${i})">-</u></div>`).join('')}</div></div>`+
+ (two?`<div class="lt" id="rb" style="left:1142px;width:670px"><div style="position:absolute;left:16px;top:0;width:380px;height:54px"><h1 style="left:0"><span class="pn" id="rbt">-</span></h1></div><div class="win" id="rbc" style="left:auto;right:17px;width:auto;padding:0 12px">NOT YET CALLED</div><div class="pills" style="left:16px;width:633px;gap:43px">${[0,1].map(j=>`<div class="pill" id="rp${j}"><span class="pn">-</span><u style="width:100px">-</u></div>`).join('')}</div></div>`:'')}
+function fillLeft(g){P.forEach((p,i)=>{const e=document.getElementById('lp'+i),v=cell(g,srow(g,i),2);if(e)e.textContent=(v===''||isNaN(parseInt(v)))?'-':parseInt(v)})}
+function fillRB(){if(!document.getElementById('rb'))return;const row=ALL.full.find(r=>r[0]===LT.seat),t=row&&tcpOf(row);if(!t)return;
+ const cr=ALL.cands.find(c=>nk(c[0])===nk(LT.seat))||[];
+ t.slice().sort((a,b)=>b.p-a.p).forEach((x,j)=>{const col=CATS[x.i][1],p=document.getElementById('rp'+j),u=p.querySelector('u'),n=p.querySelector('.pn');
+  p.style.background=col;p.style.color=darkText(col)?'#111':'#fff';n.textContent=lastName(cr[CATS[x.i][2]-2])||CATS[x.i][0].toUpperCase();fitW(n,25,170);u.style.background=lighten(col);u.textContent=x.p.toFixed(1)+'%'});
+ const k=KEYS[nk(row[2])],ik=KEYS[nk(row[1])];document.getElementById('rbc').textContent=row[2]?CN[k===undefined?4:k]+(ik===undefined?'':(k===ik?' HOLD':' GAIN')):'NOT YET CALLED';
+ const e=document.getElementById('rbt');e.textContent=LT.seat.toUpperCase();fitW(e,40,380)}
+function portal(el,swap,done){el.style.transition='transform .5s cubic-bezier(.55,0,1,.45)';el.style.transform='translateY(125px)';  /* sinks fully below the portal line (the clipped edge) */
+ setTimeout(()=>{swap();el.style.transition='none';void el.offsetHeight;el.style.transition='transform .55s cubic-bezier(0,.55,.45,1)';el.style.transform='translateY(0)';setTimeout(done,600)},540)}
+function initRB(){if(!LT.seat||!eligible().includes(LT.seat))LT.seat=nextSeat();fillRB()}
+function lowerUpdate(){const g=LASTG;if(!g)return;const two=layoutTwo(g);let el=document.getElementById('ltin');
+ if(!el){$(`<div class="stage"><div class="portal"><div id="ltin">${ltHTML(two)}</div></div>${clockHTML()}</div>`);LT.built=two;if(two)initRB()}
+ else if(two!==LT.built&&!LT.busy){LT.busy=true;portal(el,()=>{LT.built=layoutTwo(LASTG);el.innerHTML=ltHTML(LT.built);if(LT.built)initRB()},()=>{LT.busy=false})}
+ if(!LT.busy){fillLeft(g);if(LT.built){if(!LT.seat||!eligible().includes(LT.seat))LT.seat=nextSeat();fillRB()}}}
+setInterval(()=>{const rb=document.getElementById('rb');if(view!=='lower'||!rb||LT.busy||!LT.built)return;const nx=nextSeat();if(!nx)return;
+ LT.busy=true;portal(rb,()=>{LT.seat=nx;fillRB()},()=>{LT.busy=false})},CONFIG.TCP_ROTATE_MS||10000);
 function render(g){
  detect(g);const counted=pc(cell(g,4,1));
  const seat=cell(g,14,0),inc=cell(g,14,1),call=cell(g,14,2);
@@ -129,21 +165,23 @@ function render(g){
 </div>${circles()}${clockHTML()}</div>`);
   const ik=KEYS[nk(inc)],pre=(w>=0&&ik!==undefined)?(w===ik?'HOLD ':'GAIN '):'';
   placeCalled(pre+(seat.toUpperCase()||'-'),w<0?'-':CN[w])}
- else if(view=='lower'){
-  $(`<div class="stage"><div class="lt"><h1>VICTORIA DECIDES</h1><div class="win">TO WIN: 45</div><div class="pills">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})">${p[2]}<u style="background:var(--l${i})">${(cell(g,srow(g,i),2)===''||isNaN(parseInt(cell(g,srow(g,i),2))))?'-':parseInt(cell(g,srow(g,i),2))}</u></div>`).join('')}</div></div>${clockHTML()}</div>`)}
+ else if(view=='lower'){LASTG=g;lowerUpdate()}
  else $(`<div class="menu"><h1>6News Election Graphics</h1><br>${[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']].map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CONFIG.SHEET_ID?BUILD+' - live sheet connected.':'No SHEET_ID set in config.js - graphics show -.'}</p></div>`);
  tick()}
 let last=null,cached=localStorage.getItem('6n');
 function draw(t){if(t===last)return;last=t;render(t?JSON.parse(t):[[]])}
-const gurl=rg=>`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(CONFIG.LIVE_TAB||'LiveStream')}&_=${Date.now()}`;
+const gurl=(rg,sh)=>`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(sh||CONFIG.LIVE_TAB||'LiveStream')}&_=${Date.now()}`;
 const url=()=>CONFIG.SHEET_ID;
+const DBG=new URLSearchParams(location.search).get('debug');
+function dbg(t){if(!DBG)return;let d=document.getElementById('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px;max-width:1900px;white-space:pre-wrap';document.body.appendChild(d)}d.textContent=BUILD+' | sheet ...'+String(CONFIG.SHEET_ID||'(none)').slice(-6)+' | tab '+(CONFIG.LIVE_TAB||'LiveStream')+'\n'+t}
 async function poll(){
  try{if(!url())draw(DEMO);else{
-  const res=await Promise.all(BLOCKS.map(async([rg,s0,n])=>{const r=await fetch(gurl(rg),{cache:'no-store'});if(!r.ok)throw 0;return [s0,parseSheet(await r.text(),n)]}));
+  const res=await Promise.all(BLOCKS.map(async([rg,s0,n])=>{const r=await fetch(gurl(rg),{cache:'no-store'});if(!r.ok)throw new Error('Google returned HTTP '+r.status+' for '+rg);return [s0,parseSheet(await r.text(),n)]}));
   const g=[];res.forEach(([s0,rows])=>rows.forEach((r,i)=>g[s0-1+i]=r));for(let i=0;i<g.length;i++)g[i]=g[i]||[];
-  const t=JSON.stringify(g);localStorage.setItem('6n',t);draw(t);
-  if(new URLSearchParams(location.search).get('debug')){let d=document.getElementById('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px';document.body.appendChild(d)}d.textContent=BUILD+'\n'+[4,7,8,9,10,11,14,15].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n')}}}
- catch(e){console.error('Sheet fetch failed',e);if(last===null)draw(cached||'')} /* on error keep last good data on screen */
+  LASTG=g;if(view==='lower'&&/show/i.test(cell(g,17,1))&&Date.now()-allTs>10000){try{await loadAll()}catch(e){console.error('2CP data fetch failed',e);allTs=Date.now()-5000}}
+  const t=JSON.stringify(g);localStorage.setItem('6n',t);draw(t);if(view==='lower')lowerUpdate();
+  dbg([4,7,8,9,10,11,14,15,17].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n'));}}
+ catch(e){console.error('Sheet fetch failed',e);dbg('FETCH FAILED: '+e.message);if(last===null)draw(cached||'')} /* on error keep last good data on screen */
  setTimeout(poll,CONFIG.POLL_MS||2000)}
 if(cached&&url())draw(cached);
 poll();setInterval(tick,250);
