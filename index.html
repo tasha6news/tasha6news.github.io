@@ -40,7 +40,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
-const BUILD='build 27 - no seat animation';
+const BUILD='build 28 - lower third numbers stay';
 const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
 const P=[['Labor','LABOR','LABOR'],['Coalition','COALITION','LIB/NAT'],['Green','GREENS','GREENS'],['One Nation','ONE NATION','ONE NATION'],['Other','OTHER','OTHERS']];
 const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
@@ -132,9 +132,10 @@ function nextSeat(){const el=eligible();if(!el.length)return null;LT.deck=(LT.de
  if(!LT.deck.length){LT.deck=el.slice().sort(()=>Math.random()-.5);if(el.length>1&&LT.deck[LT.deck.length-1]===LT.seat)LT.deck.reverse()} /* shuffled deck: random order, no repeats until all shown */
  return LT.deck.pop()}
 const layoutTwo=g=>/show/i.test(cell(g,17,1))&&eligible().length>0;
-function ltHTML(two){return `<div class="lt" style="width:${two?1000:1704}px"><h1>VICTORIA DECIDES</h1><div class="win" style="left:${two?792:1496}px">TO WIN: 45</div><div class="pills" style="width:${two?955:1639}px;gap:${two?17:29}px">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})"><span>${two?SHORT[i]:p[2]}</span><u id="lp${i}" style="background:var(--l${i})">-</u></div>`).join('')}</div></div>`+
+const called=(g,i)=>{const v=cell(g,srow(g,i),2);return (v===''||isNaN(parseInt(v)))?'-':parseInt(v)};
+function ltHTML(two,g){return `<div class="lt" style="width:${two?1000:1704}px"><h1>VICTORIA DECIDES</h1><div class="win" style="left:${two?792:1496}px">TO WIN: 45</div><div class="pills" style="width:${two?955:1639}px;gap:${two?17:29}px">${P.map((p,i)=>`<div class="pill" style="background:var(--c${i})"><span>${two?SHORT[i]:p[2]}</span><u id="lp${i}" style="background:var(--l${i})">${called(g,i)}</u></div>`).join('')}</div></div>`+
  (two?`<div class="lt" id="rb" style="left:1142px;width:670px"><div style="position:absolute;left:16px;top:0;width:380px;height:54px"><h1 style="left:0"><span class="pn" id="rbt">-</span></h1></div><div class="win" id="rbc" style="left:auto;right:17px;width:auto;padding:0 12px">NOT YET CALLED</div><div class="pills" style="left:16px;width:633px;gap:43px">${[0,1].map(j=>`<div class="pill" id="rp${j}"><span class="pn">-</span><u style="width:100px">-</u></div>`).join('')}</div></div>`:'')}
-function fillLeft(g){P.forEach((p,i)=>{const e=document.getElementById('lp'+i),v=cell(g,srow(g,i),2);if(e)e.textContent=(v===''||isNaN(parseInt(v)))?'-':parseInt(v)})}
+function fillLeft(g){P.forEach((p,i)=>{const e=document.getElementById('lp'+i);if(e)e.textContent=called(g,i)})}
 function fillRB(){if(!document.getElementById('rb'))return;const row=ALL.full.find(r=>r[0]===LT.seat),t=row&&tcpOf(row);if(!t)return;
  const cr=ALL.cands.find(c=>nk(c[0])===nk(LT.seat))||[];
  t.slice().sort((a,b)=>b.p-a.p).forEach((x,j)=>{const col=CATS[x.i][1],p=document.getElementById('rp'+j),u=p.querySelector('u'),n=p.querySelector('.pn');
@@ -145,8 +146,8 @@ function portal(el,swap,done){el.style.transition='transform .5s cubic-bezier(.5
  setTimeout(()=>{swap();el.style.transition='none';void el.offsetHeight;el.style.transition='transform .55s cubic-bezier(0,.55,.45,1)';el.style.transform='translateY(0)';setTimeout(done,600)},540)}
 function initRB(){if(!LT.seat||!eligible().includes(LT.seat))LT.seat=nextSeat();fillRB()}
 function lowerUpdate(){const g=LASTG;if(!g)return;const two=layoutTwo(g);let el=document.getElementById('ltin');
- if(!el){$(`<div class="stage"><div class="portal"><div id="ltin">${ltHTML(two)}</div></div>${clockHTML()}</div>`);LT.built=two;if(two){initRB();LT.seatTs=Date.now()}}
- else if(two!==LT.built&&!LT.busy){LT.busy=true;portal(el,()=>{LT.built=layoutTwo(LASTG);el.innerHTML=ltHTML(LT.built);if(LT.built)initRB()},()=>{LT.busy=false;LT.seatTs=Date.now()})}
+ if(!el){$(`<div class="stage"><div class="portal"><div id="ltin">${ltHTML(two,g)}</div></div>${clockHTML()}</div>`);LT.built=two;if(two){initRB();LT.seatTs=Date.now()}}
+ else if(two!==LT.built&&!LT.busy){LT.busy=true;portal(el,()=>{LT.built=layoutTwo(LASTG);el.innerHTML=ltHTML(LT.built,LASTG);if(LT.built)initRB()},()=>{LT.busy=false;LT.seatTs=Date.now()})}
  if(!LT.busy){fillLeft(g);if(LT.built){if(!LT.seat||!eligible().includes(LT.seat)){LT.seat=nextSeat();LT.seatTs=Date.now()}fillRB()}}}
 setInterval(()=>{const rb=document.getElementById('rb');if(view!=='lower'||!rb||LT.busy||!LT.built)return;
  if(Date.now()-LT.seatTs<(CONFIG.TCP_ROTATE_MS||10000))return;               /* a seat always stays up for the full time, counted from when it appeared */
