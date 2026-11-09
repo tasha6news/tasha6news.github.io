@@ -50,13 +50,18 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 #rbc{left:auto;right:17px;width:auto;padding:0 12px}
 #rb .pills{left:16px;width:655px;gap:43px}
 #rb .pill u{width:100px}
+/* chamber */
+#hemi circle{transition:fill .6s}
+.lg{position:absolute;left:0;top:846px;width:1704px;text-align:center;font:700 30px/44px Barlow,sans-serif;color:#000;white-space:nowrap}
+.lg>div{display:inline-flex;gap:1.13em}
+.lg i{display:inline-block;width:26px;height:26px;border-radius:50%;margin-right:10px;vertical-align:-3px}
 /* menu */
 .menu{padding:60px;background:#18242e;color:#fff;width:1920px;height:1080px;font-size:30px}
 .menu a{color:#18bff4;display:block;margin:14px 0}
 </style></head><body><div id="app"></div>
 <script>
 'use strict';
-const BUILD='build 35 - tidy code, statewide colours';
+const BUILD='build 36 - chamber, Liberal/Nationals calls';
 const CFG=window.CONFIG||{},Q=new URLSearchParams(location.search),view=Q.get('view'),DBG=Q.get('debug');
 const $=h=>{document.getElementById('app').innerHTML=h};
 const byId=id=>document.getElementById(id);
@@ -65,19 +70,29 @@ const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s
 /* ---------- sheet layout ---------- */
 /* LiveStream is read in blocks so every column is one data type (Google's gviz blanks cells whose type differs from
    the rest of their column) and rows never shift. [range, first sheet row, row count] */
-const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AU14',14,1],['A15:X15',15,1],['A17:B17',17,1]];
-const R={counted:4,state:7,seat:14,names:15,lower:17};          /* LiveStream rows */
+const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AU14',14,1],['A15:X15',15,1],['A17:B17',17,1]].concat(view==='chamber'?[['A19:B19',19,1]]:[]);
+const R={counted:4,state:7,seat:14,names:15,lower:17,chamber:19};          /* LiveStream rows */
 const C={inc:1,call:2,prim:3,tcp:24,counted:45};                 /* columns of a seat row (FullResults, LiveStream row 14) */
 
 /* Statewide parties: [sheet key, full-screen label, lower-third label, lower-third short label, colour (same as seat results)] */
 const STATE=[['labor','LABOR','LABOR','ALP','#F00011'],['coalition','COALITION','LIB/NAT','L/NP','#080CAB'],['greens','GREENS','GREENS','GRN','#10C25B'],['onenation','ONE NATION','ONE NATION','ONP','#ff6d00'],['other','OTHER','OTHERS','OTH','#191919']];
 const OTHER=4;
-/* Call / incumbent text -> party index (5 = independent) -> display name */
-const KEYS={labor:0,alp:0,lib:1,lnp:1,nat:1,coalition:1,green:2,greens:2,onenation:3,pon:3,other:4,others:4,ind:5,independent:5};
-const CN=['LABOR','COALITION','GREENS','ONE NATION','OTHER','INDEPENDENT'];
+/* Called / incumbent parties. "Coalition" (or anything Liberal) counts as Liberal.
+   name = on-screen name, called = Seat Called text colour, seat = seat-result colour (chamber), cats = CATS columns sharing its colour */
+const PARTY={
+ LAB:{name:'LABOR',called:'var(--c0)',seat:'#F00011',cats:[0]},
+ LIB:{name:'LIBERAL',called:'var(--c1)',seat:'#080CAB',cats:[1]},
+ NAT:{name:'NATIONALS',called:'#137c46',seat:'#137c46',cats:[2]},
+ GRN:{name:'GREENS',called:'var(--c2)',seat:'#10C25B',cats:[3]},
+ ONP:{name:'ONE NATION',called:'var(--c3)',seat:'#ff6d00',cats:[4]},
+ IND:{name:'INDEPENDENT',called:'var(--c5)',seat:'#888888',cats:[6,7,8,9]},
+ OTH:{name:'OTHER',called:'var(--c4)',seat:'#191919',cats:[]}};
+const PKEY={labor:'LAB',alp:'LAB',liberal:'LIB',liberals:'LIB',lib:'LIB',coalition:'LIB',lnp:'LIB',nationals:'NAT',national:'NAT',nat:'NAT',green:'GRN',greens:'GRN',onenation:'ONP',pon:'ONP',independent:'IND',ind:'IND',other:'OTH',others:'OTH'};
+const partyOf=t=>PKEY[nk(t)];                                    /* undefined when blank or not recognised */
+const callOf=t=>t?(partyOf(t)||'OTH'):null;                      /* a call that isn't recognised shows as Other */
+const holdGain=(call,inc)=>{const w=callOf(call),i=partyOf(inc);return w&&i?(w===i?'HOLD':'GAIN'):''};
 /* Seat-result columns in sheet order: primary = column 3+i, 2CP = 24+i. Independent One..Four are in ballot order. */
 const CATS=[['Labor','#F00011'],['Liberals','#080CAB'],['Nationals','#137c46'],['Greens','#10C25B'],['One Nation','#ff6d00'],['Victorian Socialists','#000000'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Family First','#5A58A6'],['Animal Justice','#5B2C86'],['Libertarian','#fec327'],['Socialist Alliance','#990000'],['Legalise Cannabis','#72C342'],['The Republican','#022168'],['The West Party','#499567'],['Shooters, Fishers & Farmers','#E52B50'],['Citizens Party','#666600'],['Democrats','#FFCD00'],['Democratic Labour','#ffb536']];
-const CALL_CATS={0:[0],1:[1,2],2:[3],3:[4],5:[6,7,8,9]};       /* called party -> the CATS columns it covers (for the call pill colour) */
 
 /* ---------- helpers ---------- */
 const cell=(g,r,c)=>((g[r-1]||[])[c]||'').trim();
@@ -98,7 +113,7 @@ const fit=(sel,max)=>document.fonts.ready.then(()=>document.querySelectorAll(sel
 /* statewide table rows are matched by party name, so their order in the sheet doesn't matter */
 function stateRow(g,i){for(let r=R.state;r<R.state+5;r++){const k=nk(cell(g,r,0));if(k===STATE[i][0]||(i===2&&k==='green')||(i===OTHER&&k==='others'))return r}return R.state+i}
 const seatsCalled=(g,i)=>{const v=parseInt(cell(g,stateRow(g,i),2));return isNaN(v)?'-':v};
-const winnerName=inc=>inc?(KEYS[nk(inc)]!==undefined?CN[KEYS[nk(inc)]]:inc.toUpperCase()):'';
+const winnerName=inc=>inc?(partyOf(inc)?PARTY[partyOf(inc)].name:inc.toUpperCase()):'';
 
 /* ---------- shared pieces ---------- */
 const clockHTML=()=>`<div class="clock"><div class="live">LIVE</div><img src="assets/dark_logo.jpg"><div class="time" id="t">--:-- AEDT</div></div>`;
@@ -155,9 +170,9 @@ function placeCalled(seat,party){const go=()=>{
   putText('pt',party,f,sz,BW,top);putText('sn',seat,SF,ss,pw*.9,top+pcap+GAP)};
  Promise.all(['800 100px Barlow','700 100px Barlow','700 100px "Barlow Condensed"'].map(x=>document.fonts.load(x))).then(go,go);go()}
 function calledView(g){
- const seat=cell(g,R.seat,0),call=cell(g,R.seat,C.call),k=KEYS[nk(call)],w=call?(k===undefined?OTHER:k):-1,ik=KEYS[nk(cell(g,R.seat,C.inc))];
- $(`<div class="stage bg"><div class="card"><img class="abs" src="assets/projects_logo.png" style="left:472px;top:23px;width:717px"><span class="ct" id="sn" style="color:#000"></span><span class="ct" id="pt" style="color:var(--c${w<0?OTHER:w})"></span></div>${circles()}${clockHTML()}</div>`);
- placeCalled((w>=0&&ik!==undefined?(w===ik?'HOLD ':'GAIN '):'')+(seat.toUpperCase()||'-'),w<0?'-':CN[w])}
+ const seat=cell(g,R.seat,0),call=cell(g,R.seat,C.call),w=callOf(call),hg=holdGain(call,cell(g,R.seat,C.inc));
+ $(`<div class="stage bg"><div class="card"><img class="abs" src="assets/projects_logo.png" style="left:472px;top:23px;width:717px"><span class="ct" id="sn" style="color:#000"></span><span class="ct" id="pt" style="color:${w?PARTY[w].called:'var(--c4)'}"></span></div>${circles()}${clockHTML()}</div>`);
+ placeCalled((hg?hg+' ':'')+(seat.toUpperCase()||'-'),w?PARTY[w].name:'-')}
 
 /* ---------- lower third: normal / "Show 2CP" (LiveStream!B17) ---------- */
 /* switching layout sinks the whole bar into the portal and back; in 2CP mode the seat box swipes to the next seat every TCP_ROTATE_MS */
@@ -179,10 +194,10 @@ function fillRB(){const rb=byId('rb'),row=rb&&ALL.full.find(r=>r[0]===LT.seat),t
  const cr=ALL.cands.find(c=>nk(c[0])===nk(LT.seat))||[];
  t.forEach((x,j)=>{const col=CATS[x.i][1],p=byId('rp'+j),u=p.querySelector('u'),n=p.querySelector('.pn');
   p.style.background=col;n.textContent=lastName(cr[1+x.i])||CATS[x.i][0].toUpperCase();fitW(n,25,180);u.style.background=lighten(col);u.textContent=x.p.toFixed(1)+'%'});
- const call=row[C.call],k=KEYS[nk(call)],ik=KEYS[nk(row[C.inc])],kk=k===undefined?OTHER:k,rbc=byId('rbc'),inPct=pct(row[C.counted]);
- rbc.textContent=(isNaN(inPct)?'':inPct.toFixed(1)+'% IN | ')+(call?CN[kk]+(ik===undefined?'':(k===ik?' HOLD':' GAIN')):'NOT YET CALLED');
- const share=CALL_CATS[kk],hit=share&&t.find(x=>share.includes(x.i));   /* call pill takes the winning party's colour */
- rbc.style.background=call?(share?CATS[hit?hit.i:share[0]][1]:'#191919'):'';
+ const call=row[C.call],w=callOf(call),hg=holdGain(call,row[C.inc]),rbc=byId('rbc'),inPct=pct(row[C.counted]);
+ rbc.textContent=(isNaN(inPct)?'':inPct.toFixed(1)+'% IN | ')+(w?PARTY[w].name+(hg?' '+hg:''):'NOT YET CALLED');
+ const hit=w&&t.find(x=>PARTY[w].cats.includes(x.i));          /* call pill takes the winning party's colour */
+ rbc.style.background=w?(PARTY[w].cats.length?CATS[hit?hit.i:PARTY[w].cats[0]][1]:'#191919'):'';
  const room=rbc.getBoundingClientRect().left-rb.getBoundingClientRect().left-32,e=byId('rbt');   /* seat name shrinks to fit beside the call pill */
  byId('rbtw').style.width=room+'px';e.textContent=LT.seat.toUpperCase();fitW(e,40,room)}
 /* move el out to transform `out`, swap its content, move it back: [out seconds, swap after ms, back seconds, done after ms] */
@@ -198,14 +213,39 @@ function lowerUpdate(){const g=LT.g;if(!g)return;const two=wantTwo(g),el=byId('l
 function rotate(){const rb=byId('rb');if(!rb||LT.busy||!LT.built||Date.now()-LT.seatTs<(CFG.TCP_ROTATE_MS||10000))return;   /* each seat stays up the full time */
  const nx=nextSeat();if(!nx)return;LT.busy=true;swipe(rb,()=>{LT.seat=nx;fillRB()},()=>{LT.busy=false;LT.seatTs=Date.now()})}
 
+/* ---------- chamber: all 88 seats, LiveStream!B19 = "2022" (incumbents) or "As it stands" (calls) ---------- */
+/* Coalition fills from the left, Labor from the right, everyone else from the middle; seats with no incumbent / no call are light grey */
+const CH_ORDER=[['LIB','LIBERAL'],['NAT','NATIONALS'],['ONP','ONE NATION'],['OTH','OTHER'],['IND','INDEPENDENT'],['GRN','GREENS'],['LAB','LABOR']];
+const CH_GREY='#d9d9d9',CH_X=852,CH_Y=790,CH_DOT=30;
+const CH_SEATS=(()=>{const p=[],rows=[[230,11],[302.5,14],[375,18],[447.5,21],[520,24]];   /* [radius, seats] = 88 */
+ rows.forEach(([rad,n])=>{for(let k=0;k<n;k++){const a=Math.PI-k*Math.PI/(n-1);p.push({a,rad,x:CH_X+rad*Math.cos(a),y:CH_Y-rad*Math.sin(a)})}});
+ return p.sort((u,v)=>v.a-u.a||u.rad-v.rad)})();                /* left to right */
+function chamberView(g,x){
+ const now=/stand/i.test(cell(g,R.chamber,1)),n={};CH_ORDER.forEach(([k])=>n[k]=0);
+ (x||[]).slice(0,88).forEach(r=>{if(!r[0])return;const k=now?callOf(r[C.call]):partyOf(r[C.inc]);if(k)n[k]++});
+ const cnt=k=>n[k]||0,left=cnt('LIB')+cnt('NAT'),mid=cnt('ONP')+cnt('OTH')+cnt('IND')+cnt('GRN'),right=cnt('LAB');
+ const grey=Math.max(0,88-left-mid-right),seq=[];
+ const add=(k,m)=>{for(let i=0;i<m;i++)seq.push(k)};
+ add('LIB',cnt('LIB'));add('NAT',cnt('NAT'));
+ const start=Math.min(Math.max(left,Math.round((88-mid)/2)),88-right-mid);   /* middle parties centred */
+ add('',start-left);['ONP','OTH','IND','GRN'].forEach(k=>add(k,cnt(k)));add('',88-right-seq.length);add('LAB',right);
+ const colour=k=>k?PARTY[k].seat:CH_GREY;
+ const legend=CH_ORDER.filter(([k])=>cnt(k)).map(([k,lab])=>`<span><i style="background:${colour(k)}"></i>${lab} ${cnt(k)}</span>`).join('')+(grey?`<span><i style="background:${CH_GREY}"></i>${now?'NOT CALLED':'NO INCUMBENT'} ${grey}</span>`:'');
+ const fitLegend=()=>{const e=document.querySelector('.lg>div');if(e)fitW(e,30,1600)};                /* legend shrinks to fit when many parties have seats */
+ const sub=now?`AS IT STANDS | ${88-grey} OF 88 CALLED`:'2022 ELECTION';
+ const svg=byId('hemi');
+ if(svg){CH_SEATS.forEach((p,i)=>byId('cs'+i).setAttribute('fill',colour(seq[i])));document.querySelector('.cnt').textContent=sub;document.querySelector('.lg>div').innerHTML=legend;fitLegend();return}   /* update in place so seats fade between colours */
+ $(cardHTML('LEGISLATIVE ASSEMBLY',sub,`<svg id="hemi" class="abs" width="1704" height="946" viewBox="0 0 1704 946">${CH_SEATS.map((p,i)=>`<circle id="cs${i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${CH_DOT}" fill="${colour(seq[i])}"/>`).join('')}<text x="${CH_X}" y="728" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="800" font-size="104">45</text><text x="${CH_X}" y="775" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="700" font-size="34">TO WIN</text></svg><div class="lg"><div>${legend}</div></div>`));
+ fit('.f',105);fitLegend();document.fonts.ready.then(fitLegend)}
+
 /* ---------- menu + view dispatch ---------- */
-const MENU=[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third']];
+const MENU=[['clock','Clock / Logo'],['seat','Individual Seat Results'],['called','Seat Called'],['state','Statewide Results'],['lower','Lower Third'],['chamber','Legislative Assembly Chamber']];
 const VIEWS={
  clock:()=>$(`<div class="stage">${clockHTML()}</div>`),
- state:stateView,seat:seatView,called:calledView,
+ state:stateView,seat:seatView,called:calledView,chamber:chamberView,
  lower:g=>{LT.g=g;lowerUpdate()},
  menu:()=>$(`<div class="menu"><h1>6News Election Graphics</h1><br>${MENU.map(a=>`<a href="?view=${a[0]}">${a[1]} &rarr; ?view=${a[0]}</a>`).join('')}<p style="margin-top:30px;font-size:22px;color:#aaa">${CFG.SHEET_ID?BUILD+' - live sheet connected.':'No SHEET_ID set in config.js - graphics show -.'}</p></div>`)};
-function render(g){(VIEWS[view]||VIEWS.menu)(g);tick()}
+function render(g,x){(VIEWS[view]||VIEWS.menu)(g,x);tick()}
 
 /* ---------- data: Google Sheets (gviz JSON), polled every POLL_MS; redraws only when the data changes ---------- */
 const gurl=(rg,sh)=>`https://docs.google.com/spreadsheets/d/${CFG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${rg}&sheet=${encodeURIComponent(sh||CFG.LIVE_TAB||'LiveStream')}&_=${Date.now()}`;
@@ -218,14 +258,15 @@ function parseSheet(raw,n){const m=raw.match(/google\.visualization\.Query\.setR
 function dbg(t){if(!DBG)return;let d=byId('dbg');if(!d){d=document.createElement('pre');d.id='dbg';d.style.cssText='position:fixed;left:0;bottom:0;z-index:9;background:#000c;color:#0f0;font:16px monospace;padding:6px;max-width:1900px;white-space:pre-wrap';document.body.appendChild(d)}
  d.textContent=BUILD+' | sheet ...'+String(CFG.SHEET_ID||'(none)').slice(-6)+' | tab '+(CFG.LIVE_TAB||'LiveStream')+'\n'+t}
 let last=null;
-function draw(t){if(t===last)return false;last=t;render(t?JSON.parse(t):[[]]);return true}
+function draw(t){if(t===last)return false;last=t;const d=t?JSON.parse(t):{g:[[]]};render(Array.isArray(d)?d:d.g,d.x);return true}   /* d = {g: LiveStream rows, x: FullResults A:C for the chamber} */
 async function poll(){
  try{if(!CFG.SHEET_ID)draw('');else{
   const res=await Promise.all(BLOCKS.map(async([rg,s0,n])=>[s0,parseSheet(await fetchText(rg),n)]));
   const g=[];res.forEach(([s0,rows])=>rows.forEach((r,i)=>g[s0-1+i]=r));for(let i=0;i<g.length;i++)g[i]=g[i]||[];
   if(view==='lower'){LT.g=g;if(/show/i.test(cell(g,R.lower,1))&&Date.now()-ALL.ts>10000){try{await loadAll()}catch(e){console.error('2CP data fetch failed',e);ALL.ts=Date.now()-5000}}}
-  const t=JSON.stringify(g);store.set('6n',t);if(!draw(t)&&view==='lower')lowerUpdate();   /* 2CP data can change while LiveStream doesn't */
-  dbg([4,7,8,9,10,11,14,15,17].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n'))}}
+  const x=view==='chamber'?parseSheet(await fetchText('A2:C89',CFG.RESULTS_TAB||'FullResults'),88):undefined;
+  const t=JSON.stringify({g,x});store.set('6n',t);if(!draw(t)&&view==='lower')lowerUpdate();   /* 2CP data can change while LiveStream doesn't */
+  dbg([4,7,8,9,10,11,14,15,17,19].map(r=>r+': '+JSON.stringify(g[r-1])).join('\n'))}}
  catch(e){console.error('Sheet fetch failed',e);dbg('FETCH FAILED: '+e.message);if(last===null)draw(store.get('6n')||'')}   /* on error the last good data stays on screen */
  setTimeout(poll,CFG.POLL_MS||2000)}
 if(CFG.SHEET_ID&&store.get('6n'))draw(store.get('6n'));   /* show the last known data straight away while the first fetch runs */
