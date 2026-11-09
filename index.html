@@ -61,7 +61,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 </style></head><body><div id="app"></div>
 <script>
 'use strict';
-const BUILD='build 38 - chamber fill order';
+const BUILD='build 39 - 25 party columns';
 const CFG=window.CONFIG||{},Q=new URLSearchParams(location.search),view=Q.get('view'),DBG=Q.get('debug');
 const $=h=>{document.getElementById('app').innerHTML=h};
 const byId=id=>document.getElementById(id);
@@ -70,9 +70,8 @@ const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s
 /* ---------- sheet layout ---------- */
 /* LiveStream is read in blocks so every column is one data type (Google's gviz blanks cells whose type differs from
    the rest of their column) and rows never shift. [range, first sheet row, row count] */
-const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:AU14',14,1],['A15:X15',15,1],['A17:B17',17,1]].concat(view==='chamber'?[['A19:B19',19,1]]:[]);
+const BLOCKS=[['A4:B4',4,1],['A7:C11',7,5],['A14:BC14',14,1],['A15:AB15',15,1],['A17:B17',17,1]].concat(view==='chamber'?[['A19:B19',19,1]]:[]);
 const R={counted:4,state:7,seat:14,names:15,lower:17,chamber:19};          /* LiveStream rows */
-const C={inc:1,call:2,prim:3,tcp:24,counted:45};                 /* columns of a seat row (FullResults, LiveStream row 14) */
 
 /* Statewide parties: [sheet key, full-screen label, lower-third label, lower-third short label, colour (same as seat results)] */
 const STATE=[['labor','LABOR','LABOR','ALP','#F00011'],['coalition','COALITION','LIB/NAT','L/NP','#080CAB'],['greens','GREENS','GREENS','GRN','#10C25B'],['onenation','ONE NATION','ONE NATION','ONP','#ff6d00'],['other','OTHER','OTHERS','OTH','#191919']];
@@ -92,7 +91,9 @@ const partyOf=t=>PKEY[nk(t)];                                    /* undefined wh
 const callOf=t=>t?(partyOf(t)||'OTH'):null;                      /* a call that isn't recognised shows as Other */
 const holdGain=(call,inc)=>{const w=callOf(call),i=partyOf(inc);return w&&i?(w===i?'HOLD':'GAIN'):''};
 /* Seat-result columns in sheet order: primary = column 3+i, 2CP = 24+i. Independent One..Four are in ballot order. */
-const CATS=[['Labor','#F00011'],['Liberals','#080CAB'],['Nationals','#137c46'],['Greens','#10C25B'],['One Nation','#ff6d00'],['Victorian Socialists','#000000'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Family First','#5A58A6'],['Animal Justice','#5B2C86'],['Libertarian','#fec327'],['Socialist Alliance','#990000'],['Legalise Cannabis','#72C342'],['The Republican','#022168'],['The West Party','#499567'],['Shooters, Fishers & Farmers','#E52B50'],['Citizens Party','#666600'],['Democrats','#FFCD00'],['Democratic Labour','#ffb536']];
+const CATS=[['Labor','#F00011'],['Liberals','#080CAB'],['Nationals','#137c46'],['Greens','#10C25B'],['One Nation','#ff6d00'],['Victorian Socialists','#000000'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Independent','#888888'],['Family First','#5A58A6'],['Animal Justice','#5B2C86'],['Libertarian','#fec327'],['Socialist Alliance','#990000'],['Legalise Cannabis','#72C342'],['The Republican','#022168'],['The West Party','#499567'],['Shooters, Fishers & Farmers','#E52B50'],['Citizens Party','#666600'],['Democrats','#29a895'],['Democratic Labour','#ffb536'],['Free Palestine','#191919'],['Climate Action Now','#191919'],["I'm Voting to Avoid the Fine",'#191919'],['Safety Victoria','#191919']];
+/* columns of a seat row (FullResults, LiveStream row 14): 25 primaries from D, then 25 x 2CP, then Counted % (BB) */
+const C={inc:1,call:2,prim:3,tcp:3+CATS.length,counted:3+2*CATS.length};
 
 /* ---------- helpers ---------- */
 const cell=(g,r,c)=>((g[r-1]||[])[c]||'').trim();
@@ -178,7 +179,7 @@ function calledView(g){
 /* switching layout sinks the whole bar into the portal and back; in 2CP mode the seat box swipes to the next seat every TCP_ROTATE_MS */
 const LT={g:null,built:null,busy:false,seat:null,deck:[],seatTs:0},ALL={full:[],cands:[],ts:0};
 async function loadAll(){const f=async(rg,sh)=>parseSheet(await fetchText(rg,sh),88);
- [ALL.full,ALL.cands]=await Promise.all([f('A2:AU89',CFG.RESULTS_TAB||'FullResults'),f('A2:V89',CFG.CANDS_TAB||'Candidates')]);ALL.ts=Date.now()}
+ [ALL.full,ALL.cands]=await Promise.all([f('A2:BC89',CFG.RESULTS_TAB||'FullResults'),f('A2:Z89',CFG.CANDS_TAB||'Candidates')]);ALL.ts=Date.now()}
 /* a seat's 2CP: exactly two parties with a 2CP value, highest first */
 function tcpOf(r){const v=CATS.map((_,i)=>({i,p:pct(r[C.tcp+i])})).filter(x=>x.p>0);return v.length===2?v.sort((a,b)=>b.p-a.p):null}
 const eligible=()=>ALL.full.filter(r=>r[0]&&tcpOf(r)).map(r=>r[0]);
