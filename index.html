@@ -61,7 +61,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 </style></head><body><div id="app"></div>
 <script>
 'use strict';
-const BUILD='build 37 - Liberals naming';
+const BUILD='build 38 - chamber fill order';
 const CFG=window.CONFIG||{},Q=new URLSearchParams(location.search),view=Q.get('view'),DBG=Q.get('debug');
 const $=h=>{document.getElementById('app').innerHTML=h};
 const byId=id=>document.getElementById(id);
@@ -214,21 +214,26 @@ function rotate(){const rb=byId('rb');if(!rb||LT.busy||!LT.built||Date.now()-LT.
  const nx=nextSeat();if(!nx)return;LT.busy=true;swipe(rb,()=>{LT.seat=nx;fillRB()},()=>{LT.busy=false;LT.seatTs=Date.now()})}
 
 /* ---------- chamber: all 88 seats, LiveStream!B19 = "2022" (incumbents) or "As it stands" (calls) ---------- */
-/* Coalition fills from the left, Labor from the right, everyone else from the middle; seats with no incumbent / no call are light grey */
-const CH_ORDER=[['LIB','LIBERALS'],['NAT','NATIONALS'],['ONP','ONE NATION'],['OTH','OTHER'],['IND','INDEPENDENT'],['GRN','GREENS'],['LAB','LABOR']];
-const CH_GREY='#d9d9d9',CH_X=852,CH_Y=790,CH_DOT=30;
-const CH_SEATS=(()=>{const p=[],rows=[[230,11],[302.5,14],[375,18],[447.5,21],[520,24]];   /* [radius, seats] = 88 */
- rows.forEach(([rad,n])=>{for(let k=0;k<n;k++){const a=Math.PI-k*Math.PI/(n-1);p.push({a,rad,x:CH_X+rad*Math.cos(a),y:CH_Y-rad*Math.sin(a)})}});
- return p.sort((u,v)=>v.a-u.a||u.rad-v.rad)})();                /* left to right */
+/* Labor fills from the left, Liberals then Nationals from the right, everyone else from the middle (Greens, Independent, Other,
+   One Nation, left to right). Seats fill spoke by spoke, inside to outside along each spoke before moving to the next.
+   No incumbent / not called = light grey */
+const CH_ORDER=[['LAB','LABOR'],['GRN','GREENS'],['IND','INDEPENDENT'],['OTH','OTHER'],['ONP','ONE NATION'],['NAT','NATIONALS'],['LIB','LIBERALS']];
+const CH_MID=['GRN','IND','OTH','ONP'];
+const CH_GREY='#d9d9d9',CH_X=852,CH_Y=790,CH_DOT=30,CH_SPOKES=24;
+const CH_SEATS=[];[[230,11],[302.5,14],[375,18],[447.5,21],[520,24]].forEach(([rad,n],ring)=>{   /* [radius, seats] per ring = 88 */
+ for(let k=0;k<n;k++){const f=k/(n-1),a=Math.PI*(1-f);CH_SEATS.push({ring,x:CH_X+rad*Math.cos(a),y:CH_Y-rad*Math.sin(a),sp:Math.round(f*(CH_SPOKES-1))})}});  /* f: 0 = left edge, 1 = right edge; sp = spoke */
+const chOrder=key=>CH_SEATS.map((p,i)=>i).sort((a,b)=>key(CH_SEATS[a])-key(CH_SEATS[b])||CH_SEATS[a].ring-CH_SEATS[b].ring);   /* by spoke, then inside -> outside */
+const CH_FROM_LEFT=chOrder(p=>p.sp),CH_FROM_RIGHT=chOrder(p=>CH_SPOKES-1-p.sp),CH_FROM_MID=chOrder(p=>Math.abs(p.sp-(CH_SPOKES-1)/2));
 function chamberView(g,x){
  const now=/stand/i.test(cell(g,R.chamber,1)),n={};CH_ORDER.forEach(([k])=>n[k]=0);
  (x||[]).slice(0,88).forEach(r=>{if(!r[0])return;const k=now?callOf(r[C.call]):partyOf(r[C.inc]);if(k)n[k]++});
- const cnt=k=>n[k]||0,left=cnt('LIB')+cnt('NAT'),mid=cnt('ONP')+cnt('OTH')+cnt('IND')+cnt('GRN'),right=cnt('LAB');
- const grey=Math.max(0,88-left-mid-right),seq=[];
- const add=(k,m)=>{for(let i=0;i<m;i++)seq.push(k)};
- add('LIB',cnt('LIB'));add('NAT',cnt('NAT'));
- const start=Math.min(Math.max(left,Math.round((88-mid)/2)),88-right-mid);   /* middle parties centred */
- add('',start-left);['ONP','OTH','IND','GRN'].forEach(k=>add(k,cnt(k)));add('',88-right-seq.length);add('LAB',right);
+ const cnt=k=>n[k]||0,seq=new Array(88).fill('');
+ const take=(order,m)=>{const got=[];for(const i of order){if(got.length>=m)break;if(!seq[i]){seq[i]='x';got.push(i)}}return got};
+ take(CH_FROM_LEFT,cnt('LAB')).forEach(i=>seq[i]='LAB');
+ take(CH_FROM_RIGHT,cnt('LIB')+cnt('NAT')).forEach((i,j)=>seq[i]=j<cnt('LIB')?'LIB':'NAT');   /* Liberals on the outside edge, Nationals inward */
+ const mid=take(CH_FROM_MID,CH_MID.reduce((a,k)=>a+cnt(k),0)).sort((a,b)=>CH_SEATS[a].sp-CH_SEATS[b].sp||CH_SEATS[a].ring-CH_SEATS[b].ring);
+ let j=0;CH_MID.forEach(k=>{for(let c=0;c<cnt(k);c++)seq[mid[j++]]=k});
+ const grey=seq.filter(k=>!k).length;
  const colour=k=>k?PARTY[k].seat:CH_GREY;
  const legend=CH_ORDER.filter(([k])=>cnt(k)).map(([k,lab])=>`<span><i style="background:${colour(k)}"></i>${lab} ${cnt(k)}</span>`).join('')+(grey?`<span><i style="background:${CH_GREY}"></i>${now?'NOT CALLED':'NO INCUMBENT'} ${grey}</span>`:'');
  const fitLegend=()=>{const e=document.querySelector('.lg>div');if(e)fitW(e,30,1600)};                /* legend shrinks to fit when many parties have seats */
