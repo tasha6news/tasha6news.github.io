@@ -61,7 +61,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font
 </style></head><body><div id="app"></div>
 <script>
 'use strict';
-const BUILD='build 36 - chamber, Liberal/Nationals calls';
+const BUILD='build 37 - Liberals naming';
 const CFG=window.CONFIG||{},Q=new URLSearchParams(location.search),view=Q.get('view'),DBG=Q.get('debug');
 const $=h=>{document.getElementById('app').innerHTML=h};
 const byId=id=>document.getElementById(id);
@@ -77,11 +77,11 @@ const C={inc:1,call:2,prim:3,tcp:24,counted:45};                 /* columns of a
 /* Statewide parties: [sheet key, full-screen label, lower-third label, lower-third short label, colour (same as seat results)] */
 const STATE=[['labor','LABOR','LABOR','ALP','#F00011'],['coalition','COALITION','LIB/NAT','L/NP','#080CAB'],['greens','GREENS','GREENS','GRN','#10C25B'],['onenation','ONE NATION','ONE NATION','ONP','#ff6d00'],['other','OTHER','OTHERS','OTH','#191919']];
 const OTHER=4;
-/* Called / incumbent parties. "Coalition" (or anything Liberal) counts as Liberal.
+/* Called / incumbent parties. "Coalition" (or anything Liberal Party) counts as Liberals.
    name = on-screen name, called = Seat Called text colour, seat = seat-result colour (chamber), cats = CATS columns sharing its colour */
 const PARTY={
  LAB:{name:'LABOR',called:'var(--c0)',seat:'#F00011',cats:[0]},
- LIB:{name:'LIBERAL',called:'var(--c1)',seat:'#080CAB',cats:[1]},
+ LIB:{name:'LIBERALS',called:'var(--c1)',seat:'#080CAB',cats:[1]},
  NAT:{name:'NATIONALS',called:'#137c46',seat:'#137c46',cats:[2]},
  GRN:{name:'GREENS',called:'var(--c2)',seat:'#10C25B',cats:[3]},
  ONP:{name:'ONE NATION',called:'var(--c3)',seat:'#ff6d00',cats:[4]},
@@ -215,7 +215,7 @@ function rotate(){const rb=byId('rb');if(!rb||LT.busy||!LT.built||Date.now()-LT.
 
 /* ---------- chamber: all 88 seats, LiveStream!B19 = "2022" (incumbents) or "As it stands" (calls) ---------- */
 /* Coalition fills from the left, Labor from the right, everyone else from the middle; seats with no incumbent / no call are light grey */
-const CH_ORDER=[['LIB','LIBERAL'],['NAT','NATIONALS'],['ONP','ONE NATION'],['OTH','OTHER'],['IND','INDEPENDENT'],['GRN','GREENS'],['LAB','LABOR']];
+const CH_ORDER=[['LIB','LIBERALS'],['NAT','NATIONALS'],['ONP','ONE NATION'],['OTH','OTHER'],['IND','INDEPENDENT'],['GRN','GREENS'],['LAB','LABOR']];
 const CH_GREY='#d9d9d9',CH_X=852,CH_Y=790,CH_DOT=30;
 const CH_SEATS=(()=>{const p=[],rows=[[230,11],[302.5,14],[375,18],[447.5,21],[520,24]];   /* [radius, seats] = 88 */
  rows.forEach(([rad,n])=>{for(let k=0;k<n;k++){const a=Math.PI-k*Math.PI/(n-1);p.push({a,rad,x:CH_X+rad*Math.cos(a),y:CH_Y-rad*Math.sin(a)})}});
