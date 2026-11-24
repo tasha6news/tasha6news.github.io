@@ -25,11 +25,10 @@
 </head>
 <body>
 <h1>6News data check</h1>
-<div class="muted">Reads the Google Sheet directly, to compare with VEC / other results sites. Refreshes every 30 seconds.
-  <button id="refresh">Refresh now</button> <span id="status"></span></div>
+<div class="muted"><button id="refresh">Refresh now</button> <span id="status"></span></div>
 <div id="error" class="err"></div>
 
-<h2>Statewide (LiveStream)</h2>
+<h2>Statewide</h2>
 <dl>
   <dt>Counted</dt><dd id="sw-counted">–</dd>
   <dt>Sheet updated</dt><dd id="sw-updated">–</dd>
@@ -38,9 +37,8 @@
   <thead><tr><th>Party</th><th class="n">Primary vote</th><th class="n">Seats called</th></tr></thead>
   <tbody id="sw-body"><tr><td colspan="3">Loading…</td></tr></tbody>
 </table>
-<div class="muted">From LiveStream!B4 (counted), E4 (updated) and A7:C11.</div>
 
-<h2>Seat results (FullResults)</h2>
+<h2>Seat results</h2>
 <label>Seat: <select id="seat"><option>Loading…</option></select></label>
 <dl>
   <dt>Counted</dt><dd id="s-counted">–</dd>
@@ -49,11 +47,10 @@
   <dt>Called</dt><dd id="s-call">–</dd>
 </dl>
 <table>
-  <thead><tr><th>Party</th><th>Candidate</th><th class="n">Primary</th><th class="n">2CP</th><th class="muted">Sheet cols</th></tr></thead>
+  <thead><tr><th>Party</th><th>Candidate</th><th class="n">Primary</th><th class="n">2CP</th></tr></thead>
   <tbody id="s-body"></tbody>
 </table>
 <div id="s-unmatched"></div>
-<div class="muted">Sorted by primary vote. Primary = FullResults D–AB, 2CP = AC–BA, Counted = BB, 2CP counted = BC, names = Candidates B–Z (AA = unrecognised party).</div>
 
 <script>
 /* Sheet settings: taken from config.js (same file as the old graphics) if present; ?sheet=ID in the address also works */
@@ -110,7 +107,7 @@ function drawStatewide() {
 function drawSeat() {
   const name = $('seat').value;
   const row = data.results.find(r => r[COL.seat] === name);
-  if (!row) { $('s-body').innerHTML = '<tr><td colspan="5">No seat selected.</td></tr>'; return; }
+  if (!row) { $('s-body').innerHTML = '<tr><td colspan="4">No seat selected.</td></tr>'; return; }
   const cands = data.cands.find(r => (r[0] || '').toLowerCase() === name.toLowerCase()) || [];
   $('s-counted').textContent = fmt(pct(row[COL.counted]), 2);
   $('s-tcpcounted').textContent = fmt(pct(row[COL.tcpCounted]), 2);
@@ -124,11 +121,10 @@ function drawSeat() {
   const rows = entries.map(e => {
     if (!isNaN(e.v)) pTotal += e.v; if (!isNaN(e.t)) tTotal += e.t;
     const warn = !e.names.length ? ' <span class="warn">(votes but no candidate name)</span>' : '';
-    return `<tr><td>${esc(e.p)}</td><td>${esc(e.names.join(' / ')) || '–'}${warn}</td><td class="n">${fmt(e.v)}</td><td class="n">${e.t > 0 ? fmt(e.t) : '–'}</td>` +
-      `<td class="muted">${letter(COL.prim + e.i)} / ${letter(COL.tcp + e.i)}</td></tr>`;
+    return `<tr><td>${esc(e.p)}</td><td>${esc(e.names.join(' / ')) || '–'}${warn}</td><td class="n">${fmt(e.v)}</td><td class="n">${e.t > 0 ? fmt(e.t) : '–'}</td></tr>`;
   });
-  $('s-body').innerHTML = (rows.join('') || '<tr><td colspan="5">No candidates or votes for this seat.</td></tr>') +
-    `<tr class="total"><td colspan="2">Total</td><td class="n">${fmt(pTotal)}</td><td class="n">${tTotal > 0 ? fmt(tTotal) : '–'}</td><td></td></tr>`;
+  $('s-body').innerHTML = (rows.join('') || '<tr><td colspan="4">No candidates or votes for this seat.</td></tr>') +
+    `<tr class="total"><td colspan="2">Total</td><td class="n">${fmt(pTotal)}</td><td class="n">${tTotal > 0 ? fmt(tTotal) : '–'}</td></tr>`;
 
   const un = splitNames(cands[1 + N]);
   $('s-unmatched').innerHTML = un.length ? `<p class="warn"><b>Unrecognised party (Candidates!AA):</b> ${un.map(esc).join('; ')}</p>` : '';
