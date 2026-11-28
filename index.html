@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6News Data Check</title>
+<script src="config.js"></script>
+<style>
+  body { font: 15px/1.4 system-ui, -apple-system, Arial, sans-serif; margin: 16px; max-width: 900px; color: #111; background: #fff; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 28px 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0; }
+  th, td { border: 1px solid #ccc; padding: 3px 8px; text-align: left; }
+  th { background: #f2f2f2; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.total td { font-weight: bold; background: #fafafa; }
+  .muted { color: #666; font-size: 13px; }
+  .err { color: #b00; font-weight: bold; }
+  .warn { color: #b60; }
+  select, button { font-size: 15px; padding: 3px 6px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0; }
+  dt { font-weight: bold; }
+  dd { margin: 0; }
+</style>
+</head>
+<body>
+<h1>6News data check</h1>
+<div class="muted"><button id="refresh">Refresh now</button> <span id="status"></span></div>
+<div id="error" class="err"></div>
+
+<h2>Statewide</h2>
+<dl>
+  <dt>Counted</dt><dd id="sw-counted">–</dd>
+  <dt>Sheet updated</dt><dd id="sw-updated">–</dd>
+</dl>
+<table>
+  <thead><tr><th>Party</th><th class="n">Primary vote</th><th class="n">Seats called</th></tr></thead>
+  <tbody id="sw-body"><tr><td colspan="3">Loading…</td></tr></tbody>
+</table>
+
+<h2>Seat results</h2>
+<label>Seat: <select id="seat"><option>Loading…</option></select></label>
+<dl>
+  <dt>Counted</dt><dd id="s-counted">–</dd>
+  <dt>2CP counted</dt><dd id="s-tcpcounted">–</dd>
+  <dt>2022 holder</dt><dd id="s-inc">–</dd>
+  <dt>Called</dt><dd id="s-call">–</dd>
+</dl>
+<table>
+  <thead><tr><th>Party</th><th>Candidate</th><th class="n">Primary</th><th class="n">2CP</th></tr></thead>
+  <tbody id="s-body"></tbody>
+</table>
+<div id="s-unmatched"></div>
+
+<script>
+/* Sheet settings: taken from config.js (same file as the old graphics) if present; ?sheet=ID in the address also works */
+const CFG = Object.assign({ SHEET_ID: '', LIVE_TAB: 'LiveStream', RESULTS_TAB: 'FullResults', CANDS_TAB: 'Candidates' }, window.CONFIG || {});
+const qs = new URLSearchParams(location.search);
+if (qs.get('sheet')) CFG.SHEET_ID = qs.get('sheet');
+const REFRESH_MS = 30000;
+
+/* Party columns in sheet order (FullResults D.., AC..; Candidates B..) */
+const PARTIES = ['Labor', 'Liberals', 'Nationals', 'Greens', 'One Nation', 'Victorian Socialists',
+  'Independent 1', 'Independent 2', 'Independent 3', 'Independent 4', 'Family First', 'Animal Justice', 'Libertarian',
+  'Socialist Alliance', 'Legalise Cannabis', 'The Republican', 'The West Party', 'Shooters, Fishers & Farmers',
+  'Citizens Party', 'Democrats', 'Democratic Labour', 'Free Palestine', 'Climate Action Now',
+  "I'm Voting to Avoid the Fine", 'Safety Victoria'];
+const N = PARTIES.length;
+const COL = { seat: 0, inc: 1, call: 2, prim: 3, tcp: 3 + N, counted: 3 + 2 * N, tcpCounted: 4 + 2 * N };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const letter = i => { let s = ''; i++; while (i) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = (i - 1 - r) / 26; } return s; };
+/* Percentages arrive formatted ("42.31%") or as fractions (0.4231): returns 0-100, or NaN when blank */
+const pct = v => { v = String(v ?? '').trim(); if (v === '') return NaN; const n = parseFloat(v.replace(/[%,]/g, '')); return isNaN(n) ? NaN : (v.includes('%') || n > 1.0001 ? n : n * 100); };
+const fmt = (n, d = 2) => (isNaN(n) ? '–' : n.toFixed(d) + '%');
+const displayName = t => { t = String(t || '').trim(); const i = t.indexOf(','); return i > 0 ? t.slice(i + 1).trim() + ' ' + t.slice(0, i).trim() : t; };
+const splitNames = c => String(c || '').split(';').map(s => s.trim()).filter(Boolean);
+
+async function read(tab, range, expectedRows) {
+  const url = `https://docs.google.com/spreadsheets/d/${CFG.SHEET_ID}/gviz/tq?tqx=out:json&headers=0&range=${range}&sheet=${encodeURIComponent(tab)}&_=${Date.now()}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Google returned HTTP ${res.status} for ${tab}!${range}`);
+  const m = (await res.text()).match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);
+  if (!m) throw new Error('Google did not return sheet data: check the sheet is shared as "Anyone with the link: Viewer", the SHEET_ID and the tab names.');
+  const t = JSON.parse(m[1]).table, val = c => (c ? (c.f != null ? String(c.f) : c.v != null ? String(c.v) : '') : '');
+  const rows = t.rows.map(r => t.cols.map((_, i) => val((r.c || [])[i]).trim()));
+  const header = t.cols.map(c => c.label || '');
+  if (rows.length < expectedRows && header.some(Boolean)) rows.unshift(header);   // a row Google treated as a header goes back in
+  return rows;
+}
+
+let data = null;
+
+function drawStatewide() {
+  const { counted, state } = data;
+  $('sw-counted').textContent = fmt(pct(counted[1]), 2);
+  $('sw-updated').textContent = counted[4] || '–';
+  let total = 0, seats = 0;
+  $('sw-body').innerHTML = state.map(r => {
+    const v = pct(r[1]), s = parseInt(r[2], 10);
+    if (!isNaN(v)) total += v; if (!isNaN(s)) seats += s;
+    return `<tr><td>${esc(r[0] || '–')}</td><td class="n">${fmt(v)}</td><td class="n">${isNaN(s) ? '–' : s}</td></tr>`;
+  }).join('') + `<tr class="total"><td>Total</td><td class="n">${fmt(total)}</td><td class="n">${seats} / 88</td></tr>`;
+}
+
+function drawSeat() {
+  const name = $('seat').value;
+  const row = data.results.find(r => r[COL.seat] === name);
+  if (!row) { $('s-body').innerHTML = '<tr><td colspan="4">No seat selected.</td></tr>'; return; }
+  const cands = data.cands.find(r => (r[0] || '').toLowerCase() === name.toLowerCase()) || [];
+  $('s-counted').textContent = fmt(pct(row[COL.counted]), 2);
+  $('s-tcpcounted').textContent = fmt(pct(row[COL.tcpCounted]), 2);
+  $('s-inc').textContent = row[COL.inc] || '–';
+  $('s-call').textContent = row[COL.call] || 'Not called';
+
+  const entries = PARTIES.map((p, i) => ({ p, i, names: splitNames(cands[1 + i]).map(displayName), v: pct(row[COL.prim + i]), t: pct(row[COL.tcp + i]) }))
+    .filter(e => e.names.length || e.v > 0 || e.t > 0);
+  entries.sort((a, b) => (isNaN(b.v) ? -1 : b.v) - (isNaN(a.v) ? -1 : a.v) || a.i - b.i);
+  let pTotal = 0, tTotal = 0;
+  const rows = entries.map(e => {
+    if (!isNaN(e.v)) pTotal += e.v; if (!isNaN(e.t)) tTotal += e.t;
+    const warn = !e.names.length ? ' <span class="warn">(votes but no candidate name)</span>' : '';
+    return `<tr><td>${esc(e.p)}</td><td>${esc(e.names.join(' / ')) || '–'}${warn}</td><td class="n">${fmt(e.v)}</td><td class="n">${e.t > 0 ? fmt(e.t) : '–'}</td></tr>`;
+  });
+  $('s-body').innerHTML = (rows.join('') || '<tr><td colspan="4">No candidates or votes for this seat.</td></tr>') +
+    `<tr class="total"><td colspan="2">Total</td><td class="n">${fmt(pTotal)}</td><td class="n">${tTotal > 0 ? fmt(tTotal) : '–'}</td></tr>`;
+
+  const un = splitNames(cands[1 + N]);
+  $('s-unmatched').innerHTML = un.length ? `<p class="warn"><b>Unrecognised party (Candidates!AA):</b> ${un.map(esc).join('; ')}</p>` : '';
+}
+
+function fillSeats() {
+  const sel = $('seat'), names = data.results.map(r => r[COL.seat]).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  const want = sel.dataset.ready ? sel.value : (qs.get('seat') || names[0]);
+  if (sel.dataset.list !== names.join('|')) {
+    sel.innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
+    sel.dataset.list = names.join('|');
+  }
+  sel.value = names.includes(want) ? want : names[0] || '';
+  sel.dataset.ready = '1';
+}
+
+async function load() {
+  if (!CFG.SHEET_ID) { $('error').textContent = 'No SHEET_ID: set it in config.js, or add ?sheet=YOUR_SHEET_ID to the address.'; return; }
+  $('status').textContent = 'Loading…';
+  try {
+    const [counted, state, results, cands] = await Promise.all([
+      read(CFG.LIVE_TAB, 'A4:E4', 1), read(CFG.LIVE_TAB, 'A7:C11', 5),
+      read(CFG.RESULTS_TAB, 'A2:BC89', 88), read(CFG.CANDS_TAB, 'A2:AA89', 88)
+    ]);
+    data = { counted: counted[0] || [], state, results, cands };
+    $('error').textContent = '';
+    drawStatewide(); fillSeats(); drawSeat();
+    $('status').textContent = 'Last read ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    $('error').textContent = e.message;
+    $('status').textContent = 'Read failed ' + new Date().toLocaleTimeString() + (data ? ' (showing previous data)' : '');
+  }
+}
+
+$('seat').addEventListener('change', () => {
+  const u = new URL(location.href); u.searchParams.set('seat', $('seat').value); history.replaceState(null, '', u);
+  if (data) drawSeat();
+});
+$('refresh').addEventListener('click', load);
+load();
+setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>
